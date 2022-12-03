@@ -20,7 +20,7 @@ dlpool = ThreadPoolExecutor(max_workers=4)
 logger = logging.getLogger("fetch_hls_stream")
 
 # GCS credentials
-credentials = service_account.Credentials.from_service_account_file(
+CREDENTIALS = service_account.Credentials.from_service_account_file(
     'service-account.json')
 
 
@@ -47,7 +47,7 @@ def upload_blob_from_memory(bucket_name, contents, destination_blob_name):
     # The ID of your GCS object
     # destination_blob_name = "storage-object-name"
 
-    storage_client = storage.Client(credentials=credentials)
+    storage_client = storage.Client(credentials=CREDENTIALS)
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
     blob.upload_from_string(contents)
