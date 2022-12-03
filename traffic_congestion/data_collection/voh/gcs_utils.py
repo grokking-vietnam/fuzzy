@@ -14,13 +14,15 @@ def download_blob_into_memory(storage_client, bucket: str,
     return contents
 
 
-def multithreaded_download(storage_client, bucket: str,
-                           blob_names: List[str]) -> List[Tuple[tuple, bytes]]:
+def multithreaded_download(storage_client,
+                           bucket: str,
+                           blob_names: List[str],
+                           max_workers: int = 10) -> List[Tuple[tuple, bytes]]:
     future_proxy_mapping = {}
     futures = []
     results = []
     with tqdm(total=len(blob_names)) as pbar:
-        with ThreadPoolExecutor(max_workers=len(blob_names)) as pool:
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
             args = [(storage_client, bucket, blob_name)
                     for blob_name in blob_names]
             for arg in args:
