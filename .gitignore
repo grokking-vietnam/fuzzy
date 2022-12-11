@@ -1,4 +1,7 @@
+traffic_congestion/asr/model_checkpoints
+traffic_congestion/asr/pretrained_models
 .DS_Store
 *.json
+*.mp3
 *.pyc
 *.wav

@@ -85,4 +85,5 @@ class VOHData:
 if __name__ == "__main__":
     data = VOHData(channel="95.6")
     data.retrieve(from_date=dt.datetime(2022, 11, 29),
-                  to_date=dt.datetime(2022, 11, 30))
+                  to_date=dt.datetime(2022, 11, 30),
+                  time_range=((10, 0, 0), (10, 30, 0)))
