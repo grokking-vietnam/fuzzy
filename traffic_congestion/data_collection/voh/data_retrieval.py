@@ -7,7 +7,7 @@ from google.cloud import storage
 from google.oauth2 import service_account
 from pydub import AudioSegment
 
-from traffic_congestion.data_collection.voh.gcs_utils import \
+from data_collection.voh.gcs_utils import \
     multithreaded_download
 
 # Logger
@@ -19,7 +19,7 @@ logger.setLevel(logging.INFO)
 
 # GCS
 CREDENTIALS = service_account.Credentials.from_service_account_file(
-    'traffic_congestion/data_collection/voh/service-account.json')
+    'data_collection/voh/service-account.json')
 GCS_BUCKET = "voh-project"
 
 
