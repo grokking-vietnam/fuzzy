@@ -25,3 +25,13 @@ python join_auto_files.py
 ```bash
 bash docker_run.sh
 ```
+
+## For Telegram bot
+
+In the Telegram app, search "UtrafficBot".
+
+## Test
+
+```bash
+pytest
+```

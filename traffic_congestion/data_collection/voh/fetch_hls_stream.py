@@ -10,6 +10,13 @@ from google.cloud import storage
 from google.oauth2 import service_account
 from requests import get
 
+import sys
+from pathlib import Path
+
+sys.path.append(Path(__file__).parent.absolute().as_posix())  # Add voh/ to root path
+
+from utils.notification import telegram_bot_send_message
+
 # Set representing chunks that we have already downloaded
 dlset = set()
 
@@ -20,8 +27,7 @@ dlpool = ThreadPoolExecutor(max_workers=4)
 logger = logging.getLogger("fetch_hls_stream")
 
 # GCS credentials
-CREDENTIALS = service_account.Credentials.from_service_account_file(
-    'service-account.json')
+CREDENTIALS = service_account.Credentials.from_service_account_file('service-account.json')
 
 
 def setuplog(verbose):
@@ -53,7 +59,7 @@ def upload_blob_from_memory(bucket_name, contents, destination_blob_name):
     blob.upload_from_string(contents)
 
 
-def download_file(uri, outputdir, filename):
+def download_file_and_upload_to_gcs(uri, outputdir, filename):
     """Download a ts video and save on the outputdir as the following file:
     outputdir/date_filename"""
     try:
@@ -63,12 +69,19 @@ def download_file(uri, outputdir, filename):
         logger.info("DOWNLOADING FILE: " + uri)
         response = get(uri)
         upload_blob_from_memory(bucket_name="voh-project",
-                                contents=response.content,
-                                destination_blob_name=fpath)
+        contents=response.content,
+        destination_blob_name=fpath)
 
         logger.debug("FINISHED WRITING " + uri + " TO GCS: " + fpath)
+
+        # Comment all the code in the try block and 
+        # raise a Exception here to test the alert.
+        # raise Exception("Fake exception!")
     except Exception as ex:
         logger.error(ex)
+
+        # Re-raise exception to catch it from outside
+        raise Exception(f"Cannot download file and upload to GCS due to: {ex}")
 
 
 @click.command()
@@ -107,11 +120,21 @@ def fetch_hls_stream(url, freq, output, verbose):
 
                 if videofname not in dlset:
                     dlset.add(videofname)
-                    dlpool.submit(download_file, videouri, output, videofname)
-
+                    task = dlpool.submit(download_file_and_upload_to_gcs, videouri, output, videofname)
+                    
+                    # Exception handling outside the task submit()
+                    # => the task has to raise Exception first.
+                    try:
+                        _ = task.result()
+                    except Exception as e:
+                        telegram_bot_send_message(f"Error with {videouri}: {e}")
+                        
         # Sleep until next check
         time.sleep(freq)
 
 
 if __name__ == '__main__':
-    fetch_hls_stream()
+    try:
+        fetch_hls_stream()
+    except Exception as e:
+        telegram_bot_send_message(f"FATAL ERROR: {type(e).__name__} !!! The process has been stopped.")
