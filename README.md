@@ -2,7 +2,7 @@
 
 ## List of projects
 
-1. Traffice Congestion Detection
+1. Traffic Congestion Detection
 2. ...
 
 ---
