@@ -1,7 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Tuple
 
-import requests
 from tqdm import tqdm
 
 

@@ -1,14 +1,18 @@
 import datetime as dt
 import io
 import logging
+import sys
+from pathlib import Path
 from typing import Tuple
 
 from google.cloud import storage
 from google.oauth2 import service_account
 from pydub import AudioSegment
 
-from traffic_congestion.data_collection.voh.gcs_utils import \
-    multithreaded_download
+sys.path.append(
+    Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
+
+from utils.gcs import multithreaded_download
 
 # Logger
 logger = logging.getLogger("data_retrieval")
@@ -19,11 +23,11 @@ logger.setLevel(logging.INFO)
 
 # GCS
 CREDENTIALS = service_account.Credentials.from_service_account_file(
-    'traffic_congestion/data_collection/voh/service-account.json')
-GCS_BUCKET = "voh-project"
+    'service-account.json')
+GCS_BUCKET = "radio-project"
 
 
-class VOHData:
+class RadioData:
 
     def __init__(self, channel: str) -> None:
         self.gcs_bucket = GCS_BUCKET
@@ -83,6 +87,6 @@ class VOHData:
 
 
 if __name__ == "__main__":
-    data = VOHData(channel="95.6")
+    data = RadioData(channel="voh-95.6")
     data.retrieve(from_date=dt.datetime(2022, 11, 29),
                   to_date=dt.datetime(2022, 11, 30))

@@ -8,15 +8,16 @@ ENV PYTHONFAULTHANDLER 1
 
 FROM base AS python-deps
 
-# Install pipenv and compilation dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends gcc
+# Install poetry and compilation dependencies
+RUN apt-get update && apt-get install gcc -y --no-install-recommends
 RUN pip install --upgrade pip
-RUN pip install pipenv
+RUN pip install poetry
 
 # Install python dependencies in /.venv
-COPY Pipfile .
-COPY Pipfile.lock .
-RUN PIPENV_VENV_IN_PROJECT=1 pipenv install --deploy
+COPY ../pyproject.toml .
+COPY ../poetry.lock .
+RUN poetry config virtualenvs.in-project true
+RUN poetry install
 
 FROM base AS runtime
 

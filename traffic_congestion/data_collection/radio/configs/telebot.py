@@ -1,9 +1,11 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
-class VohConfiguration:
+
+class TeleBotConfiguration:
     BOT_TOKEN = os.environ["BOT_TOKEN"]
     BOT_CHATID = os.environ["BOT_CHATID"]
 

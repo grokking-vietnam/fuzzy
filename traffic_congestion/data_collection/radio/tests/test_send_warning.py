@@ -1,10 +1,11 @@
-import time
 import sys
+import time
 from pathlib import Path
 
-sys.path.append(Path(__file__).parent.parent.absolute().as_posix())  # Add voh/ to root path
+sys.path.append(Path(
+    __file__).parent.parent.absolute().as_posix())  # Add radio/ to root path
 
-from utils.notification import telegram_bot_send_message
+from utils.notification import telebot_send_message
 
 
 def test_send_warning():
@@ -16,4 +17,4 @@ def test_send_warning():
         a = 1 / 0
 
     except ZeroDivisionError as e:
-        telegram_bot_send_message(f"WARNING: {type(e).__name__}!")
+        telebot_send_message(f"WARNING: {type(e).__name__}!")
