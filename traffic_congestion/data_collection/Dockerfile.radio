@@ -14,8 +14,8 @@ RUN pip install --upgrade pip
 RUN pip install poetry
 
 # Install python dependencies in /.venv
-COPY ../pyproject.toml .
-COPY ../poetry.lock .
+COPY pyproject.toml .
+COPY poetry.lock .
 RUN poetry config virtualenvs.in-project true
 RUN poetry install
 
@@ -26,13 +26,13 @@ COPY --from=python-deps /.venv /.venv
 ENV PATH="/.venv/bin:$PATH"
 
 # Create and switch to a new user
-RUN useradd --create-home appuser
-WORKDIR /home/appuser
-USER appuser
+RUN useradd --create-home radio
+WORKDIR /home/radio
+USER radio
 
 # Install application into container
-COPY fetch_hls_stream.py .
-COPY service-account.json .
+COPY .env .
+COPY radio .
 
 # Run the application
 ARG CHANNEL
