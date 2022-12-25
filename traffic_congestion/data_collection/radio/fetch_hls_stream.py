@@ -146,7 +146,7 @@ def fetch_hls_stream(url, freq, output, verbose):
             # Sleep until next check
             time.sleep(freq)
     except Exception as e:
-        if alert_caching(error_type=type(e).__name__, interval=30):
+        if alert_caching(error_type=type(e).__name__, interval=15 * 60):
             telebot_send_message(
                 f"Channel *{output}*: {e} !!! The process has been stopped.")
 
