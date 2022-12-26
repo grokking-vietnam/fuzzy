@@ -93,7 +93,7 @@ def download_file_and_upload_to_gcs(uri, outputdir, filename):
         # raise a Exception here to test the alert.
         # raise Exception("Fake exception!")
     except Exception as ex:
-        logger.error(ex)
+        logger.exception(ex)
 
         # Re-raise exception to catch it from outside
         raise Exception(f"Cannot download file and upload to GCS due to: {ex}")
@@ -102,7 +102,7 @@ def download_file_and_upload_to_gcs(uri, outputdir, filename):
 @click.command()
 @click.option('--url',
               default=os.getenv("M3U8_URL"),
-              help='URL to HLS m3u8 playlist.')
+              help='URL to HLS m3u8 playlist')
 @click.option('--freq',
               default=10,
               help="Frequency for downloading the HLS m3u8 stream")
@@ -111,7 +111,8 @@ def download_file_and_upload_to_gcs(uri, outputdir, filename):
               type=click.Path(exists=True),
               help="Output directory for video files")
 @click.option('--verbose', is_flag=True, help="Verbose")
-def fetch_hls_stream(url, freq, output, verbose):
+@click.option('--alert', default=5, help="Alert interval in minute")
+def fetch_hls_stream(url, freq, output, verbose, alert):
     """Fetch a HLS stream by periodically retrieving the m3u8 url for new
     playlist video files every freq seconds. For each segment that exists,
     it downloads them to the output directory as a TS video file."""
@@ -145,10 +146,11 @@ def fetch_hls_stream(url, freq, output, verbose):
 
             # Sleep until next check
             time.sleep(freq)
-    except Exception as e:
-        if alert_caching(error_type=type(e).__name__, interval=15 * 60):
+    except Exception as ex:
+        logger.exception(ex)
+        if alert_caching(error_type=type(ex).__name__, interval=alert * 60):
             telebot_send_message(
-                f"Channel *{output}*: {e} !!! The process has been stopped.")
+                f"Channel *{output}*: {ex} !!! The process has been stopped.")
 
 
 if __name__ == '__main__':
