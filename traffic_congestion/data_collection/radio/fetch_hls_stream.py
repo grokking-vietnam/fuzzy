@@ -54,8 +54,8 @@ def to_alert(bucket_name: str, output_dir: str, interval: int) -> bool:
         blob.updated
         for blob in list_blob(bucket_name=bucket_name, prefix=prefix)
     ])
-    return (latest_timestamp.timestamp() -
-            datetime.datetime.utcnow().timestamp()) > interval
+    return (datetime.datetime.utcnow().timestamp() -
+            latest_timestamp.timestamp()) > interval
 
 
 def list_blob(bucket_name, prefix) -> List[Blob]:
