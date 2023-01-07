@@ -1,15 +1,16 @@
 import datetime
-import json
 import logging
 import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import List
 
 import click
 import m3u8
 from google.cloud import storage
+from google.cloud.storage.blob import Blob
 from google.oauth2 import service_account
 from requests import get
 
@@ -27,13 +28,14 @@ dlpool = ThreadPoolExecutor(max_workers=4)
 # Logger
 logger = logging.getLogger("fetch_hls_stream")
 
-# GCS credentials
+# GCS
+BUCKET_NAME = "radio-project"
 CREDENTIALS = service_account.Credentials.from_service_account_file(
     'service-account.json')
 
 
 def setuplog(verbose):
-    """Config the log output of fetch_hls_stream"""
+    """Configs the log output of fetch_hls_stream"""
     log_msg_format = '%(asctime)s :: %(levelname)5s ::  %(name)10s :: %(message)s'
     log_date_format = '%Y-%m-%d %H:%M:%S'
     logging.basicConfig(format=log_msg_format, datefmt=log_date_format)
@@ -43,30 +45,29 @@ def setuplog(verbose):
         logger.setLevel(logging.INFO)
 
 
-def alert_caching(error_type: str, interval: int) -> bool:
-    """Cache the timestamp of error and decide to
+def to_alert(bucket_name: str, output_dir: str, interval: int) -> bool:
+    """Fetches the latest timestamp of data and decides to
     alert or not."""
-
-    now_timestamp = time.time()
-
-    if not os.path.exists("alert_cache.json"):
-        with open('alert_cache.json', 'w') as fp:
-            fp.write(json.dumps({"dummy": time.time()}))
-        return False
-    else:
-        with open('alert_cache.json', 'r') as fp:
-            alert_cache = dict(json.loads(fp.read()))
-        prev_timestamp = alert_cache.get(error_type, -1)
-        if (now_timestamp - prev_timestamp) > interval:
-            alert_cache[error_type] = now_timestamp
-            with open('alert_cache.json', 'w') as fp:
-                fp.write(json.dumps(alert_cache))
-            return True
-        else:
-            return False
+    date = datetime.datetime.now().strftime("%Y/%m/%d")
+    prefix = os.path.join(output_dir, date)
+    latest_timestamp = max([
+        blob.updated
+        for blob in list_blob(bucket_name=bucket_name, prefix=prefix)
+    ])
+    return (latest_timestamp.timestamp() -
+            datetime.datetime.utcnow().timestamp()) > interval
 
 
-def upload_blob_from_memory(bucket_name, contents, destination_blob_name):
+def list_blob(bucket_name, prefix) -> List[Blob]:
+    """Lists the blobs inside a bucket with prefix."""
+    storage_client = storage.Client(credentials=CREDENTIALS)
+    return [
+        blob for blob in storage_client.list_blobs(bucket_name, prefix=prefix)
+    ]
+
+
+def upload_blob_from_memory(bucket_name, contents,
+                            destination_blob_name) -> None:
     """Uploads a file to the bucket."""
     storage_client = storage.Client(credentials=CREDENTIALS)
     bucket = storage_client.bucket(bucket_name)
@@ -74,16 +75,16 @@ def upload_blob_from_memory(bucket_name, contents, destination_blob_name):
     blob.upload_from_string(contents)
 
 
-def download_file_and_upload_to_gcs(uri, outputdir, filename):
-    """Download a ts video and save on the outputdir as the following file:
-    outputdir/date_filename"""
+def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
+    """Download a ts video and save on the output_dir as the following file:
+    output_dir/date_filename"""
     try:
         date = datetime.datetime.now().strftime("%Y/%m/%d/%H_%M_%S")
-        fpath = os.path.join(outputdir, date + "_" + filename)
+        fpath = os.path.join(output_dir, date + "_" + filename)
 
         logger.info("DOWNLOADING FILE: " + uri)
         response = get(uri)
-        upload_blob_from_memory(bucket_name="radio-project",
+        upload_blob_from_memory(bucket_name=BUCKET_NAME,
                                 contents=response.content,
                                 destination_blob_name=fpath)
 
@@ -148,9 +149,12 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
             time.sleep(freq)
     except Exception as ex:
         logger.exception(ex)
-        if alert_caching(error_type=type(ex).__name__, interval=alert * 60):
+        if to_alert(bucket_name=BUCKET_NAME,
+                    output_dir=output,
+                    interval=alert * 60):
             telebot_send_message(
-                f"Channel *{output}*: {ex} !!! The process has been stopped.")
+                f"Channel *{output}*: {ex} !!! No data in the last {alert} minutes."
+            )
 
 
 if __name__ == '__main__':
