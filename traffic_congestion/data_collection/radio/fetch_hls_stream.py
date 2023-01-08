@@ -95,11 +95,6 @@ def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
         with open(os.path.join("var", filename), "wb") as fp:
             fp.write(response.content)
 
-        p = subprocess.Popen("whereis ffmpeg",
-                             stdout=subprocess.PIPE,
-                             shell=True)
-        print("DEBUG", p.communicate())
-        1 / 0
         audio, _ = ffmpeg.input(os.path.join("var", filename)).output(
             '-', format="adts", ar=16000, ac=1).run(cmd="/usr/bin/ffmpeg",
                                                     capture_stdout=True)
