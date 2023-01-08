@@ -1,4 +1,5 @@
 import datetime
+import io
 import logging
 import os
 import sys
@@ -8,6 +9,7 @@ from pathlib import Path
 from typing import List
 
 import click
+import ffmpeg
 import m3u8
 from google.cloud import storage
 from google.cloud.storage.blob import Blob
@@ -80,13 +82,27 @@ def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
     output_dir/date_filename"""
     try:
         date = datetime.datetime.now().strftime("%Y/%m/%d/%H_%M_%S")
-        fpath = os.path.join(output_dir, date + "_" + filename)
+        fpath = os.path.join(
+            output_dir,
+            date + "_" + filename.split(".")[0] + "_mono_16khz.aac")
 
         logger.info("DOWNLOADING FILE: " + uri)
         response = get(uri)
+
+        # Convert audio to mono channel and 16 kHz
+        if not os.path.exists("tmp"):
+            os.makedirs("tmp")
+        with open(os.path.join("tmp", filename), "wb") as fp:
+            fp.write(response.content)
+
+        audio, _ = ffmpeg.input(os.path.join("tmp", filename)).output(
+            '-', format="adts", ar=16000, ac=1).run(capture_stdout=True)
+
         upload_blob_from_memory(bucket_name=BUCKET_NAME,
-                                contents=response.content,
+                                contents=audio,
                                 destination_blob_name=fpath)
+
+        os.remove(os.path.join("tmp", filename))
 
         logger.debug("FINISHED WRITING " + uri + " TO GCS: " + fpath)
 
@@ -153,7 +169,7 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
         logger.exception(ex)
         if to_alert(bucket_name=BUCKET_NAME,
                     output_dir=output,
-                    interval=alert * 60):
+                    interval=int(alert) * 60):
             telebot_send_message(
                 f"Channel *{output}*: {ex} !!! No data in the last {alert} minutes."
             )
