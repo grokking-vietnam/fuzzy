@@ -112,7 +112,9 @@ def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
               type=click.Path(exists=True),
               help="Output directory for video files")
 @click.option('--verbose', is_flag=True, help="Verbose")
-@click.option('--alert', default=5, help="Alert interval in minute")
+@click.option('--alert',
+              default=os.getenv("ALERT"),
+              help="Alert interval in minute")
 def fetch_hls_stream(url, freq, output, verbose, alert):
     """Fetch a HLS stream by periodically retrieving the m3u8 url for new
     playlist video files every freq seconds. For each segment that exists,
