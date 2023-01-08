@@ -31,7 +31,9 @@ if __name__ == "__main__":
         print(p.communicate())
 
         p = subprocess.Popen(build_command, stdout=subprocess.PIPE, shell=True)
-        print(p.communicate())
+        while p.poll() is None:
+            stdout = p.stdout.readline()
+            print(stdout)
 
         p = subprocess.Popen(run_command, stdout=subprocess.PIPE, shell=True)
         print(p.communicate())
