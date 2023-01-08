@@ -9,8 +9,7 @@ ENV PYTHONFAULTHANDLER 1
 FROM base AS python-deps
 
 # Install poetry and compilation dependencies
-RUN apt-get update && apt-get install gcc ffmpeg -y --no-install-recommends
-RUN which ffmpeg
+RUN apt-get update && apt-get install gcc -y --no-install-recommends
 RUN pip install --upgrade pip
 RUN pip install poetry
 
@@ -25,6 +24,9 @@ FROM base AS runtime
 # Copy virtual env from python-deps stage
 COPY --from=python-deps /.venv /.venv
 ENV PATH="/.venv/bin:$PATH"
+
+# Install ffmpeg
+RUN apt-get update && apt-get install ffmpeg -y --no-install-recommends
 
 # Create and switch to a new user
 RUN useradd --create-home radio
