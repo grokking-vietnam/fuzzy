@@ -27,6 +27,7 @@ ENV PATH="/.venv/bin:$PATH"
 
 # Install ffmpeg
 RUN apt-get update && apt-get install ffmpeg -y --no-install-recommends
+RUN whereis ffmpeg
 
 # Create and switch to a new user
 RUN useradd --create-home radio
