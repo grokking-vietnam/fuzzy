@@ -2,6 +2,11 @@ import datetime
 import logging
 import os
 import sys
+
+sys.path.append('/usr/bin/ffmpeg')
+sys.path.append('/usr/share/ffmpeg')
+sys.path.append('/usr/share/man/man1/ffmpeg.1.gz')
+
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -14,8 +19,6 @@ from google.cloud.storage.blob import Blob
 from google.oauth2 import service_account
 from pydub import AudioSegment
 from requests import get
-
-sys.path.append('/usr/bin/ffmpeg')
 
 sys.path.append(
     Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
