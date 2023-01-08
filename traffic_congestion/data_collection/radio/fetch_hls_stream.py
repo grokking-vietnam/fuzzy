@@ -1,7 +1,7 @@
 import datetime
-import io
 import logging
 import os
+import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -95,6 +95,10 @@ def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
         with open(os.path.join("var", filename), "wb") as fp:
             fp.write(response.content)
 
+        p = subprocess.Popen("which ffmpeg",
+                             stdout=subprocess.PIPE,
+                             shell=True)
+        print(p.communicate())
         audio, _ = ffmpeg.input(os.path.join("var", filename)).output(
             '-', format="adts", ar=16000, ac=1).run(cmd="/usr/bin/ffmpeg",
                                                     capture_stdout=True)
