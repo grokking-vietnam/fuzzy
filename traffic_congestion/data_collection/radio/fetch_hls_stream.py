@@ -95,7 +95,7 @@ def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
         with open(os.path.join("var", filename), "wb") as fp:
             fp.write(response.content)
 
-        p = subprocess.Popen(["whereis", "ffmpeg"],
+        p = subprocess.Popen("whereis ffmpeg",
                              stdout=subprocess.PIPE,
                              shell=True)
         print("DEBUG", p.communicate())
