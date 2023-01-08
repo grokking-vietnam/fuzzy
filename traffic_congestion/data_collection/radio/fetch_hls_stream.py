@@ -90,19 +90,19 @@ def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
         response = get(uri)
 
         # Convert audio to mono channel and 16 kHz
-        if not os.path.exists("tmp"):
-            os.makedirs("tmp")
-        with open(os.path.join("tmp", filename), "wb") as fp:
+        if not os.path.exists("var"):
+            os.makedirs("var")
+        with open(os.path.join("var", filename), "wb") as fp:
             fp.write(response.content)
 
-        audio, _ = ffmpeg.input(os.path.join("tmp", filename)).output(
+        audio, _ = ffmpeg.input(os.path.join("var", filename)).output(
             '-', format="adts", ar=16000, ac=1).run(capture_stdout=True)
 
         upload_blob_from_memory(bucket_name=BUCKET_NAME,
                                 contents=audio,
                                 destination_blob_name=fpath)
 
-        os.remove(os.path.join("tmp", filename))
+        os.remove(os.path.join("var", filename))
 
         logger.debug("FINISHED WRITING " + uri + " TO GCS: " + fpath)
 
