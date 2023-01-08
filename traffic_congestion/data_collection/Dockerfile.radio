@@ -9,7 +9,7 @@ ENV PYTHONFAULTHANDLER 1
 FROM base AS python-deps
 
 # Install poetry and compilation dependencies
-RUN apt-get update && apt-get install gcc -y --no-install-recommends
+RUN apt-get update && apt-get install gcc ffmpeg -y --no-install-recommends
 RUN pip install --upgrade pip
 RUN pip install poetry
 
