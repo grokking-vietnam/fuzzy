@@ -1,8 +1,8 @@
 channels:
-  ben-tre:
-    M3U8_URL: https://1012163901.vnns.net/bentre-FM.adm.480p.tms/playlist.m3u8
-  # dong-nai:
-  #   M3U8_URL: http://118.107.85.5:1935/radio/dongnai_aac/playlist.m3u8
+  # ben-tre:
+  #   M3U8_URL: https://1012163901.vnns.net/bentre-FM.adm.480p.tms/playlist.m3u8
+  dong-nai:
+    M3U8_URL: http://118.107.85.5:1935/radio/dongnai_aac/playlist.m3u8
   # vov-giaothong-hn:
   #   M3U8_URL: http://stream2.mobiradio.vn/vovradio/vovgthn.stream/playlist.m3u8
   # vov-giaothong-hcm:
