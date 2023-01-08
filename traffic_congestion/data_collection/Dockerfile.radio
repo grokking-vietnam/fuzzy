@@ -13,11 +13,6 @@ RUN apt-get update && apt-get install gcc wget -y --no-install-recommends
 RUN pip install --upgrade pip
 RUN pip install poetry
 
-# Install ffmpeg
-RUN mkdir -p /var/johnvansickle ~/bin && cd /var/johnvansickle && \
-    wget -O ffmpeg-release-amd64-static.tar.xz https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz && \
-    tar -xvf ffmpeg-release-amd64-static.tar.xz --strip-components=1
-
 # Install python dependencies in /.venv
 COPY pyproject.toml .
 COPY poetry.lock .
@@ -34,6 +29,11 @@ ENV PATH="/.venv/bin:$PATH"
 RUN useradd --create-home radio
 WORKDIR /home/radio
 USER radio
+
+# Install ffmpeg
+RUN mkdir -p /var/johnvansickle ~/bin && cd /var/johnvansickle &&
+    wget -O ffmpeg-release-amd64-static.tar.xz https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz &&
+    tar -xvf ffmpeg-release-amd64-static.tar.xz --strip-components=1
 
 # Install application into container
 COPY .env .
