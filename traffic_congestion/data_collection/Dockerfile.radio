@@ -10,38 +10,38 @@ FROM base AS python-deps
 
 # Install poetry and compilation dependencies
 RUN apt-get update && apt-get install gcc ffmpeg -y --no-install-recommends
-RUN ffmpeg -version
-RUN pip install --upgrade pip
-RUN pip install poetry
+RUN which ffmpeg
+# RUN pip install --upgrade pip
+# RUN pip install poetry
 
-# Install python dependencies in /.venv
-COPY pyproject.toml .
-COPY poetry.lock .
-RUN poetry config virtualenvs.in-project true
-RUN poetry install
+# # Install python dependencies in /.venv
+# COPY pyproject.toml .
+# COPY poetry.lock .
+# RUN poetry config virtualenvs.in-project true
+# RUN poetry install
 
-FROM base AS runtime
+# FROM base AS runtime
 
-# Copy virtual env from python-deps stage
-COPY --from=python-deps /.venv /.venv
-ENV PATH="/.venv/bin:$PATH"
+# # Copy virtual env from python-deps stage
+# COPY --from=python-deps /.venv /.venv
+# ENV PATH="/.venv/bin:$PATH"
 
-# Create and switch to a new user
-RUN useradd --create-home radio
-WORKDIR /home/radio
-USER radio
+# # Create and switch to a new user
+# RUN useradd --create-home radio
+# WORKDIR /home/radio
+# USER radio
 
-# Install application into container
-COPY .env .
-COPY radio .
+# # Install application into container
+# COPY .env .
+# COPY radio .
 
-# Run the application
-ARG CHANNEL
-ENV OUTPUT_DIR=$CHANNEL
-ARG M3U8_URL
-ENV M3U8_URL=$M3U8_URL
-ARG ALERT
-ENV ALERT=$ALERT
+# # Run the application
+# ARG CHANNEL
+# ENV OUTPUT_DIR=$CHANNEL
+# ARG M3U8_URL
+# ENV M3U8_URL=$M3U8_URL
+# ARG ALERT
+# ENV ALERT=$ALERT
 
-RUN mkdir ${CHANNEL}
-ENTRYPOINT ["python", "-m", "fetch_hls_stream"]
+# RUN mkdir ${CHANNEL}
+# ENTRYPOINT ["python", "-m", "fetch_hls_stream"]
