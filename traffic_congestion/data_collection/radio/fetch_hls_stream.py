@@ -15,6 +15,8 @@ from google.oauth2 import service_account
 from pydub import AudioSegment
 from requests import get
 
+sys.path.append('/usr/bin/ffmpeg')
+
 sys.path.append(
     Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
 
