@@ -95,9 +95,10 @@ def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
         with open(os.path.join("var", filename), "wb") as fp:
             fp.write(response.content)
 
-        audio, _ = ffmpeg.input(os.path.join("var", filename)).output(
-            '-', format="adts", ar=16000, ac=1).run(cmd="/usr/share/ffmpeg",
-                                                    capture_stdout=True)
+        audio, _ = ffmpeg.input(os.path.join(
+            "var", filename)).output('-', format="adts", ar=16000,
+                                     ac=1).run(cmd="/usr/local/bin/ffmpeg",
+                                               capture_stdout=True)
 
         upload_blob_from_memory(bucket_name=BUCKET_NAME,
                                 contents=audio,

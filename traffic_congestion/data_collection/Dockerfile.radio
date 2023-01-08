@@ -10,7 +10,6 @@ FROM base AS python-deps
 
 # Install poetry and compilation dependencies
 RUN apt-get update && apt-get install gcc ffmpeg -y --no-install-recommends
-RUN whereis ffmpeg
 RUN pip install --upgrade pip
 RUN pip install poetry
 
