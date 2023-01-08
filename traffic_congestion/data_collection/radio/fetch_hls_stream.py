@@ -100,10 +100,10 @@ def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
         # audio.export(os.path.join("var",
         #                           filename.split(".")[0] + "_mono_16khz.aac"),
         #              format="adts")
-        audio, _ = ffmpeg.input(os.path.join("var", filename)).output(
-            '-', format="adts", ar=16000,
-            ac=1).run(cmd="/var/ffmpeg_johnvansickle/ffmpeg",
-                      capture_stdout=True)
+        audio, _ = ffmpeg.input(os.path.join(
+            "var", filename)).output('-', format="adts", ar=16000,
+                                     ac=1).run(cmd="/var/johnvansickle/ffmpeg",
+                                               capture_stdout=True)
 
         upload_blob_from_memory(bucket_name=BUCKET_NAME,
                                 contents=open(os.path.join("var", filename),
