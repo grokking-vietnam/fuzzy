@@ -1,4 +1,4 @@
-FROM python:3.9-bullseye AS python-deps
+FROM python:3.9-bullseye AS base
 
 # Setup env
 ENV LANG C.UTF-8
@@ -6,9 +6,10 @@ ENV LC_ALL C.UTF-8
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONFAULTHANDLER 1
 
+FROM base AS python-deps
+
 # Install poetry and compilation dependencies
-RUN apt-get update && apt-get install gcc ffmpeg -y --no-install-recommends
-RUN which ffmpeg
+RUN apt-get update && apt-get install gcc wget -y --no-install-recommends
 RUN pip install --upgrade pip
 RUN pip install poetry
 
@@ -18,6 +19,8 @@ COPY poetry.lock .
 RUN poetry config virtualenvs.in-project true
 RUN poetry install
 
+FROM base AS runtime
+
 # Copy virtual env from python-deps stage
 COPY --from=python-deps /.venv /.venv
 ENV PATH="/.venv/bin:$PATH"
@@ -26,6 +29,11 @@ ENV PATH="/.venv/bin:$PATH"
 RUN useradd --create-home radio
 WORKDIR /home/radio
 USER radio
+
+# Install ffmpeg
+RUN mkdir -p /home/radio/johnvansickle ~/bin && cd /home/radio/johnvansickle && \
+    wget -O ffmpeg-release-amd64-static.tar.xz https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz && \
+    tar -xvf ffmpeg-release-amd64-static.tar.xz --strip-components=1
 
 # Install application into container
 COPY .env .

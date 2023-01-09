@@ -1,7 +1,6 @@
 import datetime
 import logging
 import os
-import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -14,6 +13,7 @@ import m3u8
 from google.cloud import storage
 from google.cloud.storage.blob import Blob
 from google.oauth2 import service_account
+from pydub import AudioSegment
 from requests import get
 
 sys.path.append(
@@ -95,14 +95,10 @@ def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
         with open(os.path.join("var", filename), "wb") as fp:
             fp.write(response.content)
 
-        p = subprocess.Popen("which ffmpeg",
-                             stdout=subprocess.PIPE,
-                             shell=True)
-        print("DEBUG", p.communicate())
-        1 / 0
         audio, _ = ffmpeg.input(os.path.join("var", filename)).output(
-            '-', format="adts", ar=16000, ac=1).run(cmd="/usr/bin/ffmpeg",
-                                                    capture_stdout=True)
+            '-', format="adts", ar=16000,
+            ac=1).run(cmd="/home/radio/johnvansickle/ffmpeg",
+                      capture_stdout=True)
 
         upload_blob_from_memory(bucket_name=BUCKET_NAME,
                                 contents=audio,
