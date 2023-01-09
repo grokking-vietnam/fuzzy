@@ -1,0 +1,4 @@
+[core]
+    remote = radio-project
+['remote "radio-project"']
+    url = gs://radio-project

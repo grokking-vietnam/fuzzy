@@ -1,0 +1,4 @@
+outs:
+- md5: 4cbbe32169c4ec79a0969d5c92cbcaff
+  size: 40971084
+  path: ffmpeg-release-amd64-static.tar.xz

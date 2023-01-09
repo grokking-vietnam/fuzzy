@@ -31,8 +31,10 @@ WORKDIR /home/radio
 USER radio
 
 # Install ffmpeg
-RUN mkdir -p /home/radio/johnvansickle ~/bin && cd /home/radio/johnvansickle && \
-    wget -O ffmpeg-release-amd64-static.tar.xz https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz && \
+COPY ffmpeg-release-amd64-static.tar.xz .
+RUN mkdir -p /home/radio/johnvansickle && \
+    mv ffmpeg-release-amd64-static.tar.xz /home/radio/johnvansickle && \
+    cd /home/radio/johnvansickle && \
     tar -xvf ffmpeg-release-amd64-static.tar.xz --strip-components=1
 
 # Install application into container
