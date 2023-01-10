@@ -19,11 +19,12 @@ if __name__ == "__main__":
         url = channels["channels"][channel]["M3U8_URL"]
         remove_command = f"docker rm -f {channel}"
         build_command = f"""docker build -f Dockerfile.radio . \
-                            --build-arg CHANNEL={channel} \
-                            --build-arg M3U8_URL={url} \
-                            --build-arg ALERT={alert_interval} \
-                            -t {channel}"""
-        run_command = f"docker run --detach -it --restart=always --name={channel} {channel}:latest"
+                            -t radio"""
+        run_command = f"""docker run --detach -it --restart=always \
+                            -e OUTPUT_DIR='{channel}' \
+                            -e M3U8_URL='{url}' \
+                            -e ALERT={alert_interval} \
+                            --name=radio-{channel} radio:latest"""
 
         p = subprocess.Popen(remove_command,
                              stdout=subprocess.PIPE,

@@ -41,13 +41,4 @@ RUN mkdir -p /home/radio/johnvansickle && \
 COPY .env .
 COPY radio .
 
-# Run the application
-ARG CHANNEL
-ENV OUTPUT_DIR=$CHANNEL
-ARG M3U8_URL
-ENV M3U8_URL=$M3U8_URL
-ARG ALERT
-ENV ALERT=$ALERT
-
-RUN mkdir ${CHANNEL}
 ENTRYPOINT ["python", "-m", "fetch_hls_stream"]

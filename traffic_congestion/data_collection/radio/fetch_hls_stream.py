@@ -78,7 +78,7 @@ def upload_blob_from_memory(bucket_name, contents,
 
 
 def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
-    """Download a ts video and save on the output_dir as the following file:
+    """Download a ts audio and save on the output_dir as the following file:
     output_dir/date_filename"""
     try:
         date = datetime.datetime.now().strftime("%Y/%m/%d/%H_%M_%S")
@@ -90,21 +90,22 @@ def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
         response = get(uri)
 
         # Convert audio to mono channel and 16 kHz
-        if not os.path.exists("var"):
-            os.makedirs("var")
-        with open(os.path.join("var", filename), "wb") as fp:
+        if not os.path.exists("/home/radio/tmp"):
+            os.makedirs("/home/radio/tmp")
+        with open(os.path.join("/home/radio/tmp", filename), "wb") as fp:
             fp.write(response.content)
 
-        audio, _ = ffmpeg.input(os.path.join("var", filename)).output(
-            '-', format="adts", ar=16000,
-            ac=1).run(cmd="/home/radio/johnvansickle/ffmpeg",
-                      capture_stdout=True)
+        audio, _ = ffmpeg.input(os.path.join(
+            "/home/radio/tmp",
+            filename)).output('-', format="adts", ar=16000,
+                              ac=1).run(cmd="/home/radio/johnvansickle/ffmpeg",
+                                        capture_stdout=True)
 
         upload_blob_from_memory(bucket_name=BUCKET_NAME,
                                 contents=audio,
                                 destination_blob_name=fpath)
 
-        os.remove(os.path.join("var", filename))
+        os.remove(os.path.join("/home/radio/tmp", filename))
 
         logger.debug("FINISHED WRITING " + uri + " TO GCS: " + fpath)
 
@@ -127,19 +128,21 @@ def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
               help="Frequency for downloading the HLS m3u8 stream")
 @click.option('--output',
               default=os.getenv("OUTPUT_DIR"),
-              type=click.Path(exists=True),
-              help="Output directory for video files")
+              help="Output directory for audio files")
 @click.option('--verbose', is_flag=True, help="Verbose")
 @click.option('--alert',
               default=os.getenv("ALERT"),
               help="Alert interval in minute")
 def fetch_hls_stream(url, freq, output, verbose, alert):
     """Fetch a HLS stream by periodically retrieving the m3u8 url for new
-    playlist video files every freq seconds. For each segment that exists,
-    it downloads them to the output directory as a TS video file."""
+    playlist audio files every freq seconds. For each segment that exists,
+    it downloads them to the output directory as a AAC audio file."""
 
     try:
         setuplog(verbose)
+
+        if not os.path.exists(output):
+            os.makedirs(output)
 
         while True:
             # Retrieve the main m3u8 dynamic playlist file
