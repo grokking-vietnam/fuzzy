@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     for channel in channels["channels"].keys():
         url = channels["channels"][channel]["M3U8_URL"]
-        remove_command = f"docker rm -f {channel}"
+        remove_command = f"docker rm -f radio-{channel}"
         build_command = f"""docker build -f Dockerfile.radio . \
                             -t radio"""
         run_command = f"""docker run --detach -it --restart=always \
