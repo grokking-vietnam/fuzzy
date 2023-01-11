@@ -87,7 +87,7 @@ def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
             date + "_" + filename.split(".")[0] + "_mono_16khz.aac")
 
         logger.info("DOWNLOADING FILE: " + uri)
-        response = get(uri)
+        response = get(uri, verify=False)
 
         # Convert audio to mono channel and 16 kHz
         if not os.path.exists("/home/radio/tmp"):
@@ -146,12 +146,13 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
 
         while True:
             # Retrieve the main m3u8 dynamic playlist file
-            dynamic_playlist = m3u8.load(url)
+            dynamic_playlist = m3u8.load(url, verify_ssl=False)
 
             # Retrieve the real m3u8 playlist file from the dynamic one
             for playlist in dynamic_playlist.playlists:
                 # Check if we have each segment in the playlist file
-                playlist_data = m3u8.load(playlist.absolute_uri)
+                playlist_data = m3u8.load(playlist.absolute_uri,
+                                          verify_ssl=False)
 
                 for audio_segment in playlist_data.segments:
                     # Since the playlist changes names dynamically we use the
