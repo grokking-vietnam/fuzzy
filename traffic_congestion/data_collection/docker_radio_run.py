@@ -30,6 +30,9 @@ if __name__ == "__main__":
                             -e OUTPUT_DIR='{channel}' \
                             -e M3U8_URL='{url}' \
                             -e ALERT={alert_interval} \
+                            --log-driver json-file \
+                            --log-opts max-size=1M \
+                            --log-opts max-file=5 \
                             --name=radio-{channel} radio:latest"""
 
         p = subprocess.Popen(remove_command,
