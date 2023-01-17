@@ -1,0 +1,5 @@
+outs:
+- md5: 142dc67815f6ac53c111bbe422f5d33c
+  size: 416
+  isexec: true
+  path: s3.json
