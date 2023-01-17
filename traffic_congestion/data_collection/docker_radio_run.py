@@ -2,9 +2,19 @@
 Simple program to build and run Docker containers for each radio channel.
 """
 
+import os
 import subprocess
 
 import yaml
+
+
+def run_cmd(cmd: str) -> None:
+    """Runs bash script."""
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+    while p.poll() is None:
+        stdout = p.stdout.readline()
+        print(stdout)
+
 
 if __name__ == "__main__":
     with open("radio_channels.yaml", "r") as fp:
@@ -15,18 +25,23 @@ if __name__ == "__main__":
 
     alert_interval = int(input("Alert interval in minute: "))
 
-    build_command = f"""docker build -f Dockerfile.radio . \
+    # Build base Docker image
+    build_cmd = f"""docker build -f Dockerfile.radio . \
                             -t radio"""
-    p = subprocess.Popen(build_command, stdout=subprocess.PIPE, shell=True)
-    while p.poll() is None:
-        stdout = p.stdout.readline()
-        print(stdout)
+    run_cmd(cmd=build_cmd)
+
+    # Start SeaweedFS
+    seaweedfs_cmd = """
+    docker compose -f seaweedfs/seaweedfs-compose.yml -p seaweedfs up -d
+    """
+    run_cmd(cmd=seaweedfs_cmd)
 
     for channel in channels["channels"].keys():
         url = channels["channels"][channel]["M3U8_URL"]
 
-        remove_command = f"docker rm -f radio-{channel}"
-        run_command = f"""docker run --detach -it --restart=always \
+        remove_cmd = f"docker rm -f radio-{channel}"
+        docker_run_cmd = f"""docker run --detach -it --restart=always \
+                            --add-host=seaweedfs:10.10.0.1 \
                             -e OUTPUT_DIR='{channel}' \
                             -e M3U8_URL='{url}' \
                             -e ALERT={alert_interval} \
@@ -35,10 +50,5 @@ if __name__ == "__main__":
                             --log-opt max-file=5 \
                             --name=radio-{channel} radio:latest"""
 
-        p = subprocess.Popen(remove_command,
-                             stdout=subprocess.PIPE,
-                             shell=True)
-        print(p.communicate())
-
-        p = subprocess.Popen(run_command, stdout=subprocess.PIPE, shell=True)
-        print(p.communicate())
+        run_cmd(cmd=remove_cmd)
+        run_cmd(cmd=docker_run_cmd)

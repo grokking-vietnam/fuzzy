@@ -5,20 +5,16 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import List
 
 import click
 import ffmpeg
 import m3u8
-from google.cloud import storage
-from google.cloud.storage.blob import Blob
-from google.oauth2 import service_account
-from pydub import AudioSegment
 from requests import get
 
 sys.path.append(
     Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
 
+from utils.aws import list_blob, write_buf_to_s3
 from utils.notification import telebot_send_message
 
 # Set representing chunks that we have already downloaded
@@ -30,16 +26,14 @@ dlpool = ThreadPoolExecutor(max_workers=4)
 # Logger
 logger = logging.getLogger("fetch_hls_stream")
 
-# GCS
+# AWS
 BUCKET_NAME = "radio-project"
-CREDENTIALS = service_account.Credentials.from_service_account_file(
-    'service-account.json')
 
 
 def setuplog(verbose):
     """Configs the log output of fetch_hls_stream"""
-    log_msg_format = '%(asctime)s :: %(levelname)5s ::  %(name)10s :: %(message)s'
-    log_date_format = '%Y-%m-%d %H:%M:%S'
+    log_msg_format = "%(asctime)s :: %(levelname)5s ::  %(name)10s :: %(message)s"
+    log_date_format = "%Y-%m-%d %H:%M:%S"
     logging.basicConfig(format=log_msg_format, datefmt=log_date_format)
     if verbose:
         logger.setLevel(logging.DEBUG)
@@ -50,38 +44,21 @@ def setuplog(verbose):
 def to_alert(bucket_name: str, output_dir: str, interval: int) -> bool:
     """Fetches the latest timestamp of data and decides to
     alert or not."""
-    date = datetime.datetime.now().strftime("%Y/%m/%d")
+    date = datetime.datetime.utcnow().strftime("%Y/%m/%d")
     prefix = os.path.join(output_dir, date)
     latest_timestamp = max([
-        blob.updated
+        blob.LastModified
         for blob in list_blob(bucket_name=bucket_name, prefix=prefix)
     ])
     return (datetime.datetime.utcnow().timestamp() -
             latest_timestamp.timestamp()) > interval
 
 
-def list_blob(bucket_name, prefix) -> List[Blob]:
-    """Lists the blobs inside a bucket with prefix."""
-    storage_client = storage.Client(credentials=CREDENTIALS)
-    return [
-        blob for blob in storage_client.list_blobs(bucket_name, prefix=prefix)
-    ]
-
-
-def upload_blob_from_memory(bucket_name, contents,
-                            destination_blob_name) -> None:
-    """Uploads a file to the bucket."""
-    storage_client = storage.Client(credentials=CREDENTIALS)
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(destination_blob_name)
-    blob.upload_from_string(contents)
-
-
-def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
+def download_file_and_upload_to_aws(uri, output_dir, filename) -> None:
     """Download a ts audio and save on the output_dir as the following file:
     output_dir/date_filename"""
     try:
-        date = datetime.datetime.now().strftime("%Y/%m/%d/%H_%M_%S")
+        date = datetime.datetime.utcnow().strftime("%Y/%m/%d/%H_%M_%S")
         fpath = os.path.join(
             output_dir,
             date + "_" + filename.split(".")[0] + "_mono_16khz.aac")
@@ -95,19 +72,19 @@ def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
         with open(os.path.join("/home/radio/tmp", filename), "wb") as fp:
             fp.write(response.content)
 
-        audio, _ = ffmpeg.input(os.path.join(
+        audio, _ = (ffmpeg.input(os.path.join(
             "/home/radio/tmp",
-            filename)).output('-', format="adts", ar=16000,
+            filename)).output("-", format="adts", ar=16000,
                               ac=1).run(cmd="/home/radio/johnvansickle/ffmpeg",
-                                        capture_stdout=True)
+                                        capture_stdout=True))
 
-        upload_blob_from_memory(bucket_name=BUCKET_NAME,
-                                contents=audio,
-                                destination_blob_name=fpath)
+        write_buf_to_s3(contents=audio,
+                        bucket_name=BUCKET_NAME,
+                        object_name=fpath)
 
         os.remove(os.path.join("/home/radio/tmp", filename))
 
-        logger.debug("FINISHED WRITING " + uri + " TO GCS: " + fpath)
+        logger.debug("FINISHED WRITING " + uri + " TO S3: " + fpath)
 
         # Comment all the code in the try block and
         # raise a Exception here to test the alert.
@@ -116,21 +93,21 @@ def download_file_and_upload_to_gcs(uri, output_dir, filename) -> None:
         logger.exception(ex)
 
         # Re-raise exception to catch it from outside
-        raise Exception(f"Cannot download file and upload to GCS due to: {ex}")
+        raise Exception(f"Cannot download file and upload to S3 due to: {ex}")
 
 
 @click.command()
-@click.option('--url',
+@click.option("--url",
               default=os.getenv("M3U8_URL"),
-              help='URL to HLS m3u8 playlist')
-@click.option('--freq',
+              help="URL to HLS m3u8 playlist")
+@click.option("--freq",
               default=10,
               help="Frequency for downloading the HLS m3u8 stream")
-@click.option('--output',
+@click.option("--output",
               default=os.getenv("OUTPUT_DIR"),
               help="Output directory for audio files")
-@click.option('--verbose', is_flag=True, help="Verbose")
-@click.option('--alert',
+@click.option("--verbose", is_flag=True, help="Verbose")
+@click.option("--alert",
               default=os.getenv("ALERT"),
               help="Alert interval in minute")
 def fetch_hls_stream(url, freq, output, verbose, alert):
@@ -162,8 +139,12 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
 
                     if audio_fname not in dlset:
                         dlset.add(audio_fname)
-                        task = dlpool.submit(download_file_and_upload_to_gcs,
-                                             audio_uri, output, audio_fname)
+                        task = dlpool.submit(
+                            download_file_and_upload_to_aws,
+                            audio_uri,
+                            output,
+                            audio_fname,
+                        )
 
                         # Exception handling outside the task submit()
                         # => the task has to raise Exception first.
@@ -181,5 +162,5 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
             )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     fetch_hls_stream()
