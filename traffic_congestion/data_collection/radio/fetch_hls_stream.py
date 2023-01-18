@@ -122,33 +122,37 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
             os.makedirs(output)
 
         while True:
-            # Retrieve the main m3u8 dynamic playlist file
-            dynamic_playlist = m3u8.load(url, verify_ssl=False)
+            if (datetime.datetime.utcnow() +
+                    datetime.timedelta(hours=7)).hour in range(6, 22):
+                # Retrieve the main m3u8 dynamic playlist file
+                dynamic_playlist = m3u8.load(url, verify_ssl=False)
 
-            # Retrieve the real m3u8 playlist file from the dynamic one
-            for playlist in dynamic_playlist.playlists:
-                # Check if we have each segment in the playlist file
-                playlist_data = m3u8.load(playlist.absolute_uri,
-                                          verify_ssl=False)
+                # Retrieve the real m3u8 playlist file from the dynamic one
+                for playlist in dynamic_playlist.playlists:
+                    # Check if we have each segment in the playlist file
+                    playlist_data = m3u8.load(playlist.absolute_uri,
+                                              verify_ssl=False)
 
-                for audio_segment in playlist_data.segments:
-                    # Since the playlist changes names dynamically we use the
-                    # last part of the uri (vfname) to identify segments
-                    audio_uri = audio_segment.absolute_uri
-                    audio_fname = audio_uri.split("_")[-1]
+                    for audio_segment in playlist_data.segments:
+                        # Since the playlist changes names dynamically we use the
+                        # last part of the uri (vfname) to identify segments
+                        audio_uri = audio_segment.absolute_uri
+                        audio_fname = audio_uri.split("_")[-1]
 
-                    if audio_fname not in dlset:
-                        dlset.add(audio_fname)
-                        task = dlpool.submit(
-                            download_file_and_upload_to_aws,
-                            audio_uri,
-                            output,
-                            audio_fname,
-                        )
+                        if audio_fname not in dlset:
+                            dlset.add(audio_fname)
+                            task = dlpool.submit(
+                                download_file_and_upload_to_aws,
+                                audio_uri,
+                                output,
+                                audio_fname,
+                            )
 
-                        # Exception handling outside the task submit()
-                        # => the task has to raise Exception first.
-                        _ = task.result()
+                            # Exception handling outside the task submit()
+                            # => the task has to raise Exception first.
+                            _ = task.result()
+            else:
+                logger.info("SLEEPING")
 
             # Sleep until next check
             time.sleep(freq)

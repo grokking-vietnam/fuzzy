@@ -1,6 +1,8 @@
 .DS_Store
 *.aac
 *.json
+*.gstmp
+*.log
 *.pyc
 *.wav
 .env*
