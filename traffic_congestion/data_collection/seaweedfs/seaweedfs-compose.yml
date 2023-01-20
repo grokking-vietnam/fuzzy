@@ -7,16 +7,18 @@ services:
       - 9333:9333
       - 19333:19333
       - 9324:9324
-    command: master -ip=master -ip.bind=0.0.0.0 -metricsPort=9324
+    command: master -ip=master -ip.bind=0.0.0.0 -metricsPort=9324 -volumeSizeLimitMB=1000
+    restart: always
   volume:
     image: chrislusf/seaweedfs # use a remote image
     ports:
       - 8080:8080
       - 18080:18080
       - 9325:9325
-    command: volume -mserver="master:9333" -ip.bind=0.0.0.0 -port=8080 -metricsPort=9325
+    command: volume -mserver="master:9333" -ip.bind=0.0.0.0 -port=8080 -metricsPort=9325 -max=50
     depends_on:
       - master
+    restart: always
   filer:
     image: chrislusf/seaweedfs # use a remote image
     ports:
@@ -29,6 +31,7 @@ services:
     depends_on:
       - master
       - volume
+    restart: always
   s3:
     image: chrislusf/seaweedfs # use a remote image
     ports:
@@ -41,6 +44,7 @@ services:
       - filer
     volumes:
       - /etc/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+    restart: always
   webdav:
     image: chrislusf/seaweedfs # use a remote image
     ports:
@@ -50,6 +54,7 @@ services:
       - master
       - volume
       - filer
+    restart: always
   prometheus:
     image: prom/prometheus:v2.21.0
     ports:
@@ -59,6 +64,7 @@ services:
     command: --web.enable-lifecycle --config.file=/etc/prometheus/prometheus.yml
     depends_on:
       - s3
+    restart: always
 
 networks:
   default:

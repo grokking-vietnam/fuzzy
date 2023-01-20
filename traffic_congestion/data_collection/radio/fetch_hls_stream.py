@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 import os
 import sys
@@ -14,6 +15,7 @@ from requests import get
 sys.path.append(
     Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
 
+from compaction import main as compaction_main
 from utils.aws import list_blob, write_buf_to_s3
 from utils.notification import telebot_send_message
 
@@ -28,6 +30,9 @@ logger = logging.getLogger("fetch_hls_stream")
 
 # AWS
 BUCKET_NAME = "radio-project"
+
+# Running hours
+RUNNING_HOURS = range(6, 22)
 
 
 def setuplog(verbose):
@@ -46,8 +51,9 @@ def to_alert(bucket_name: str, output_dir: str, interval: int) -> bool:
     alert or not."""
     date = datetime.datetime.utcnow().strftime("%Y/%m/%d")
     prefix = os.path.join(output_dir, date)
+    x = list_blob(bucket_name=bucket_name, prefix=prefix)
     latest_timestamp = max([
-        blob.LastModified
+        blob.last_modified
         for blob in list_blob(bucket_name=bucket_name, prefix=prefix)
     ])
     return (datetime.datetime.utcnow().timestamp() -
@@ -123,7 +129,7 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
 
         while True:
             if (datetime.datetime.utcnow() +
-                    datetime.timedelta(hours=7)).hour in range(6, 22):
+                    datetime.timedelta(hours=7)).hour in RUNNING_HOURS:
                 # Retrieve the main m3u8 dynamic playlist file
                 dynamic_playlist = m3u8.load(url, verify_ssl=False)
 
@@ -152,7 +158,33 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
                             # => the task has to raise Exception first.
                             _ = task.result()
             else:
-                logger.info("SLEEPING")
+                # Run compaction to reduce size and upload to AWS S3
+                today = datetime.datetime.utcnow().strftime("%Y%m%d")
+                if not os.path.exists(f"./{output}.cache.json"):
+                    with open(f"./{output}.cache.json", "w",
+                              encoding="utf-8") as f:
+                        json.dump(
+                            {today: False},
+                            f,
+                            ensure_ascii=False,
+                            indent=4,
+                        )
+                completion_flag = json.load(open(f"./{output}.cache.json",
+                                                 "r"))
+                if not completion_flag.get(today, False):
+                    compaction_main(channel=output,
+                                    running_hours=RUNNING_HOURS)
+                    completion_flag[today] = True
+                    with open(f"./{output}.cache.json", "w",
+                              encoding="utf-8") as f:
+                        json.dump(
+                            completion_flag,
+                            f,
+                            ensure_ascii=False,
+                            indent=4,
+                        )
+                else:
+                    logger.info("SLEEPING")
 
             # Sleep until next check
             time.sleep(freq)
