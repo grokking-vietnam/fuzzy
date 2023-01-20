@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 import os
 import sys
@@ -14,6 +15,7 @@ from requests import get
 sys.path.append(
     Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
 
+from compaction import main as compaction_main
 from utils.aws import list_blob, write_buf_to_s3
 from utils.notification import telebot_send_message
 
@@ -28,6 +30,9 @@ logger = logging.getLogger("fetch_hls_stream")
 
 # AWS
 BUCKET_NAME = "radio-project"
+
+# Running hours
+RUNNING_HOURS = range(6, 22)
 
 
 def setuplog(verbose):
@@ -46,8 +51,9 @@ def to_alert(bucket_name: str, output_dir: str, interval: int) -> bool:
     alert or not."""
     date = datetime.datetime.utcnow().strftime("%Y/%m/%d")
     prefix = os.path.join(output_dir, date)
+    x = list_blob(bucket_name=bucket_name, prefix=prefix)
     latest_timestamp = max([
-        blob.LastModified
+        blob.last_modified
         for blob in list_blob(bucket_name=bucket_name, prefix=prefix)
     ])
     return (datetime.datetime.utcnow().timestamp() -
@@ -122,33 +128,63 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
             os.makedirs(output)
 
         while True:
-            # Retrieve the main m3u8 dynamic playlist file
-            dynamic_playlist = m3u8.load(url, verify_ssl=False)
+            if (datetime.datetime.utcnow() +
+                    datetime.timedelta(hours=7)).hour in RUNNING_HOURS:
+                # Retrieve the main m3u8 dynamic playlist file
+                dynamic_playlist = m3u8.load(url, verify_ssl=False)
 
-            # Retrieve the real m3u8 playlist file from the dynamic one
-            for playlist in dynamic_playlist.playlists:
-                # Check if we have each segment in the playlist file
-                playlist_data = m3u8.load(playlist.absolute_uri,
-                                          verify_ssl=False)
+                # Retrieve the real m3u8 playlist file from the dynamic one
+                for playlist in dynamic_playlist.playlists:
+                    # Check if we have each segment in the playlist file
+                    playlist_data = m3u8.load(playlist.absolute_uri,
+                                              verify_ssl=False)
 
-                for audio_segment in playlist_data.segments:
-                    # Since the playlist changes names dynamically we use the
-                    # last part of the uri (vfname) to identify segments
-                    audio_uri = audio_segment.absolute_uri
-                    audio_fname = audio_uri.split("_")[-1]
+                    for audio_segment in playlist_data.segments:
+                        # Since the playlist changes names dynamically we use the
+                        # last part of the uri (vfname) to identify segments
+                        audio_uri = audio_segment.absolute_uri
+                        audio_fname = audio_uri.split("_")[-1]
 
-                    if audio_fname not in dlset:
-                        dlset.add(audio_fname)
-                        task = dlpool.submit(
-                            download_file_and_upload_to_aws,
-                            audio_uri,
-                            output,
-                            audio_fname,
+                        if audio_fname not in dlset:
+                            dlset.add(audio_fname)
+                            task = dlpool.submit(
+                                download_file_and_upload_to_aws,
+                                audio_uri,
+                                output,
+                                audio_fname,
+                            )
+
+                            # Exception handling outside the task submit()
+                            # => the task has to raise Exception first.
+                            _ = task.result()
+            else:
+                # Run compaction to reduce size and upload to AWS S3
+                today = datetime.datetime.utcnow().strftime("%Y%m%d")
+                if not os.path.exists(f"./{output}.cache.json"):
+                    with open(f"./{output}.cache.json", "w",
+                              encoding="utf-8") as f:
+                        json.dump(
+                            {today: False},
+                            f,
+                            ensure_ascii=False,
+                            indent=4,
                         )
-
-                        # Exception handling outside the task submit()
-                        # => the task has to raise Exception first.
-                        _ = task.result()
+                completion_flag = json.load(open(f"./{output}.cache.json",
+                                                 "r"))
+                if not completion_flag.get(today, False):
+                    compaction_main(channel=output,
+                                    running_hours=RUNNING_HOURS)
+                    completion_flag[today] = True
+                    with open(f"./{output}.cache.json", "w",
+                              encoding="utf-8") as f:
+                        json.dump(
+                            completion_flag,
+                            f,
+                            ensure_ascii=False,
+                            indent=4,
+                        )
+                else:
+                    logger.info("SLEEPING")
 
             # Sleep until next check
             time.sleep(freq)

@@ -2,7 +2,6 @@
 Simple program to build and run Docker containers for each radio channel.
 """
 
-import os
 import subprocess
 
 import yaml
