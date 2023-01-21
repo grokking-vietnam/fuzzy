@@ -5,6 +5,7 @@ import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 from pathlib import Path
 
 import click
@@ -117,7 +118,7 @@ def download_file_and_upload_to_aws(uri, output_dir, filename) -> None:
               default=os.getenv("ALERT"),
               help="Alert interval in minute")
 def fetch_hls_stream(url, freq, output, verbose, alert):
-    """Fetch a HLS stream by periodically retrieving the m3u8 url for new
+    """Fetches a HLS stream by periodically retrieving the m3u8 url for new
     playlist audio files every freq seconds. For each segment that exists,
     it downloads them to the output directory as a AAC audio file."""
 
@@ -132,18 +133,40 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
                     datetime.timedelta(hours=7)).hour in RUNNING_HOURS:
                 # Retrieve the main m3u8 dynamic playlist file
                 dynamic_playlist = m3u8.load(url, verify_ssl=False)
+                if len(dynamic_playlist.playlists) > 0:
+                    # Retrieve the real m3u8 playlist file from the dynamic one
+                    for playlist in dynamic_playlist.playlists:
+                        # Check if we have each segment in the playlist file
+                        playlist_data = m3u8.load(playlist.absolute_uri,
+                                                  verify_ssl=False)
 
-                # Retrieve the real m3u8 playlist file from the dynamic one
-                for playlist in dynamic_playlist.playlists:
-                    # Check if we have each segment in the playlist file
-                    playlist_data = m3u8.load(playlist.absolute_uri,
-                                              verify_ssl=False)
+                        for audio_segment in playlist_data.segments:
+                            # Since the playlist changes names dynamically we use the
+                            # last part of the uri (vfname) to identify segments
+                            audio_uri = audio_segment.absolute_uri
+                            audio_fname = audio_uri.split("_")[-1]
+
+                            if audio_fname not in dlset:
+                                dlset.add(audio_fname)
+                                task = dlpool.submit(
+                                    download_file_and_upload_to_aws,
+                                    audio_uri,
+                                    output,
+                                    audio_fname,
+                                )
+
+                                # Exception handling outside the task submit()
+                                # => the task has to raise Exception first.
+                                _ = task.result()
+                elif len(dynamic_playlist.segments) > 0:
+                    # Dynamic playlist file is also a playlist
+                    playlist_data = deepcopy(dynamic_playlist)
 
                     for audio_segment in playlist_data.segments:
                         # Since the playlist changes names dynamically we use the
                         # last part of the uri (vfname) to identify segments
                         audio_uri = audio_segment.absolute_uri
-                        audio_fname = audio_uri.split("_")[-1]
+                        audio_fname = audio_uri.split("/")[-1]
 
                         if audio_fname not in dlset:
                             dlset.add(audio_fname)
