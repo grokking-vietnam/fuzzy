@@ -47,18 +47,21 @@ def setuplog(verbose):
         logger.setLevel(logging.INFO)
 
 
-def to_alert(bucket_name: str, output_dir: str, interval: int) -> bool:
+def to_alert(bucket_name: str,
+             output_dir: str,
+             interval: int,
+             running_hours=range(6, 22)) -> bool:
     """Fetches the latest timestamp of data and decides to
     alert or not."""
     date = datetime.datetime.utcnow().strftime("%Y/%m/%d")
     prefix = os.path.join(output_dir, date)
-    x = list_blob(bucket_name=bucket_name, prefix=prefix)
     latest_timestamp = max([
         blob.last_modified
         for blob in list_blob(bucket_name=bucket_name, prefix=prefix)
     ])
-    return (datetime.datetime.utcnow().timestamp() -
-            latest_timestamp.timestamp()) > interval
+    return (
+        (datetime.datetime.utcnow().timestamp() - latest_timestamp.timestamp())
+        > interval) & (datetime.datetime.utcnow().hour in running_hours)
 
 
 def download_file_and_upload_to_aws(uri, output_dir, filename) -> None:
@@ -213,9 +216,12 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
             time.sleep(freq)
     except Exception as ex:
         logger.exception(ex)
-        if to_alert(bucket_name=BUCKET_NAME,
-                    output_dir=output,
-                    interval=int(alert) * 60):
+        if to_alert(
+                bucket_name=BUCKET_NAME,
+                output_dir=output,
+                interval=int(alert) * 60,
+                running_hours=RUNNING_HOURS,
+        ):
             telebot_send_message(
                 f"Channel *{output}*: {ex} !!! No data in the last {alert} minutes."
             )
