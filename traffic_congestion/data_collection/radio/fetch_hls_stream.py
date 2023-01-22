@@ -59,9 +59,10 @@ def to_alert(bucket_name: str,
         blob.last_modified
         for blob in list_blob(bucket_name=bucket_name, prefix=prefix)
     ])
-    return (
-        (datetime.datetime.utcnow().timestamp() - latest_timestamp.timestamp())
-        > interval) & (datetime.datetime.utcnow().hour in running_hours)
+    return ((datetime.datetime.utcnow().timestamp() -
+             latest_timestamp.timestamp()) > interval) & (
+                 (datetime.datetime.utcnow() + datetime.time(hour=7)).hour
+                 in running_hours)
 
 
 def download_file_and_upload_to_aws(uri, output_dir, filename) -> None:
