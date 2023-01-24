@@ -55,14 +55,17 @@ def to_alert(bucket_name: str,
     alert or not."""
     date = datetime.datetime.utcnow().strftime("%Y/%m/%d")
     prefix = os.path.join(output_dir, date)
-    latest_timestamp = max([
-        blob.last_modified
-        for blob in list_blob(bucket_name=bucket_name, prefix=prefix)
-    ])
-    return ((datetime.datetime.utcnow().timestamp() -
-             latest_timestamp.timestamp()) > interval) & (
-                 (datetime.datetime.utcnow() + datetime.time(hour=7)).hour
-                 in running_hours)
+    blobs = list_blob(bucket_name=bucket_name, prefix=prefix)
+    if blobs:
+        latest_timestamp = max([
+            blob.last_modified
+            for blob in list_blob(bucket_name=bucket_name, prefix=prefix)
+        ])
+    else:
+        latest_timestamp = datetime.datetime(2000, 1, 1)
+    return (
+        (datetime.datetime.utcnow().timestamp() - latest_timestamp.timestamp())
+        > interval) & (datetime.datetime.utcnow().hour + 7 in running_hours)
 
 
 def download_file_and_upload_to_aws(uri, output_dir, filename) -> None:

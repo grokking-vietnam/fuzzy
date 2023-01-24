@@ -20,6 +20,7 @@ from utils.aws import delete_blob, download_blob, list_blob, write_file_to_s3
 
 # AWS
 BUCKET_NAME = "radio-project"
+TTL = 14  # days
 
 # Logger
 logger = logging.getLogger("fetch_hls_stream")
@@ -57,11 +58,6 @@ def compress(output: str, filepaths: List[str]) -> None:
     # Clean up
     with ThreadPoolExecutor(100) as p:
         _ = [p.submit(delete_file, filepath) for filepath in filepaths]
-    with ThreadPoolExecutor(10) as p:
-        _ = [
-            p.submit(delete_blob, BUCKET_NAME, filepath)
-            for filepath in filepaths
-        ]
     delete_file(filepath=output)
 
 
@@ -70,40 +66,60 @@ def main(channel: str, running_hours=range(6, 22)) -> None:
     # Get list of all files from SeaweedFS S3
     blobs = list_blob(bucket_name=BUCKET_NAME, prefix=f"{channel}/")
 
-    s3_compress = defaultdict(list)
-    s3_remove = []
-    # Parsing channel and datetime from file
-    for blob in blobs:
-        _, year, month, day, filename = blob.key.split("/")
-        hour = filename.split("_")[0]
-        ymdh = datetime.datetime(int(year), int(month), int(day), int(hour))
-        if int(hour) + 7 in running_hours:
-            if (datetime.datetime.utcnow() - ymdh).total_seconds() > 2 * 3600:
-                s3_compress["|".join([channel, year, month, day,
-                                      hour])].append(blob.key)
-        else:
-            s3_remove.append(blob.key)
+    if blobs:
+        s3_compress = defaultdict(list)
+        s3_garbage = []
+        # Parsing channel and datetime from file
+        for blob in blobs:
+            _, year, month, day, filename = blob.key.split("/")
+            hour = filename.split("_")[0]
+            ymdh = datetime.datetime(int(year), int(month), int(day),
+                                     int(hour))
+            if int(hour) + 7 in running_hours:
+                if (datetime.datetime.utcnow() -
+                        ymdh).total_seconds() > 2 * 3600:
+                    s3_compress["|".join([channel, year, month, day,
+                                          hour])].append(blob.key)
+                if (datetime.datetime.utcnow() -
+                        ymdh).total_seconds() > TTL * 24 * 3600:
+                    s3_garbage.append(blob.key)
+            else:
+                s3_garbage.append(blob.key)
 
-    # Get files to local disk
-    for key, filepaths in s3_compress.items():
-        logger.info(key)
+        # Get list of all files from AWS S3
+        aws_blobs = list_blob(bucket_name=BUCKET_NAME,
+                              prefix=f"{channel}/",
+                              backend="aws")
+        aws_keys = set([
+            blob.key.replace(".tar.gz", "").replace("/", "|")
+            for blob in aws_blobs
+        ])
+
+        s3_compress = {
+            key: filepaths
+            for key, filepaths in s3_compress.items() if key not in aws_keys
+        }  # compressed and uploaded to AWS S3 or not?
+
+        # Get files to local disk
+        for key, filepaths in s3_compress.items():
+            logger.info(key)
+            with ThreadPoolExecutor(10) as p:
+                _ = [
+                    p.submit(download_blob, BUCKET_NAME, filepath, "seaweedfs")
+                    for filepath in filepaths
+                ]
+
+        # Compress files to 1 hour block
+        for key, filepaths in s3_compress.items():
+            compress(output="/".join(key.split("|")) + ".tar.gz",
+                     filepaths=filepaths)
+
+        # Remove garbage files
         with ThreadPoolExecutor(10) as p:
             _ = [
-                p.submit(download_blob, BUCKET_NAME, filepath, "seaweedfs")
-                for filepath in filepaths
+                p.submit(delete_blob, BUCKET_NAME, filepath)
+                for filepath in s3_garbage
             ]
-
-    # Compress files to 1 hour block
-    for key, filepaths in s3_compress.items():
-        compress(output="/".join(key.split("|")) + ".tar.gz",
-                 filepaths=filepaths)
-
-    # Remove unnecessary files
-    with ThreadPoolExecutor(10) as p:
-        _ = [
-            p.submit(delete_blob, BUCKET_NAME, filepath)
-            for filepath in s3_remove
-        ]
 
 
 if __name__ == "__main__":
