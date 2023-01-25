@@ -190,8 +190,9 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
             else:
                 # Run compaction to reduce size and upload to AWS S3
                 today = datetime.datetime.utcnow().strftime("%Y%m%d")
-                if not os.path.exists(f"./{output}.cache.json"):
-                    with open(f"./{output}.cache.json", "w",
+                if not os.path.exists(f"/tmp/{output}.cache.json"):
+                    with open(f"/tmp/{output}.cache.json",
+                              "w",
                               encoding="utf-8") as f:
                         json.dump(
                             {today: False},
@@ -199,13 +200,14 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
                             ensure_ascii=False,
                             indent=4,
                         )
-                completion_flag = json.load(open(f"./{output}.cache.json",
-                                                 "r"))
+                completion_flag = json.load(
+                    open(f"/tmp/{output}.cache.json", "r"))
                 if not completion_flag.get(today, False):
                     compaction_main(channel=output,
                                     running_hours=RUNNING_HOURS)
                     completion_flag[today] = True
-                    with open(f"./{output}.cache.json", "w",
+                    with open(f"/tmp/{output}.cache.json",
+                              "w",
                               encoding="utf-8") as f:
                         json.dump(
                             completion_flag,
