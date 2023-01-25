@@ -5,6 +5,10 @@ Simple program to build and run Docker containers for each radio channel.
 import subprocess
 
 import yaml
+from radio.utils.aws import create_client
+
+# AWS
+BUCKET_NAME = "radio-project"
 
 
 def run_cmd(cmd: str) -> None:
@@ -34,6 +38,12 @@ if __name__ == "__main__":
     docker compose -f seaweedfs/seaweedfs-compose.yml -p seaweedfs up -d
     """
     run_cmd(cmd=seaweedfs_cmd)
+    try:
+        client = create_client()
+        client.create_bucket(Bucket=BUCKET_NAME)
+    except Exception as ex:
+        if "BucketAlreadyExists" not in str(ex):
+            print(ex)
 
     for channel in channels["channels"].keys():
         url = channels["channels"][channel]["M3U8_URL"]

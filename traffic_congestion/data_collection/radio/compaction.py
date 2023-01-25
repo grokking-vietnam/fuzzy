@@ -111,8 +111,11 @@ def main(channel: str, running_hours=range(6, 22)) -> None:
 
         # Compress files to 1 hour block
         for key, filepaths in s3_compress.items():
-            compress(output="/".join(key.split("|")) + ".tar.gz",
-                     filepaths=filepaths)
+            try:
+                compress(output="/".join(key.split("|")) + ".tar.gz",
+                         filepaths=filepaths)
+            except Exception as ex:
+                logger.exception(ex)
 
         # Remove garbage files
         with ThreadPoolExecutor(10) as p:
