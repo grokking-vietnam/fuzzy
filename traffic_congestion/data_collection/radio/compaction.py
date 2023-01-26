@@ -90,10 +90,13 @@ def main(channel: str, running_hours=range(6, 22)) -> None:
         aws_blobs = list_blob(bucket_name=BUCKET_NAME,
                               prefix=f"{channel}/",
                               backend="aws")
-        aws_keys = set([
-            blob.key.replace(".tar.gz", "").replace("/", "|")
-            for blob in aws_blobs
-        ])
+        if aws_blobs:
+            aws_keys = set([
+                blob.key.replace(".tar.gz", "").replace("/", "|")
+                for blob in aws_blobs
+            ])
+        else:
+            aws_keys = set([])
 
         s3_compress = {
             key: filepaths
