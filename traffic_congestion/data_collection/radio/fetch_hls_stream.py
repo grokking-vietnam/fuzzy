@@ -78,7 +78,7 @@ def download_file_and_upload_to_aws(uri, output_dir, filename) -> None:
             date + "_" + filename.split(".")[0] + "_mono_16khz.aac")
 
         logger.info("DOWNLOADING FILE: " + uri)
-        response = get(uri, verify=False)
+        response = get(uri, verify=VERIFY_SSL)
 
         # Convert audio to mono channel and 16 kHz
         if not os.path.exists("/home/radio/tmp"):
@@ -129,6 +129,9 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
     playlist audio files every freq seconds. For each segment that exists,
     it downloads them to the output directory as a AAC audio file."""
 
+    global VERIFY_SSL
+    VERIFY_SSL = True
+
     try:
         setuplog(verbose)
 
@@ -139,13 +142,17 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
             if (datetime.datetime.utcnow() +
                     datetime.timedelta(hours=7)).hour in RUNNING_HOURS:
                 # Retrieve the main m3u8 dynamic playlist file
-                dynamic_playlist = m3u8.load(url, verify_ssl=False)
+                try:
+                    dynamic_playlist = m3u8.load(url, verify_ssl=VERIFY_SSL)
+                except Exception as ex:
+                    logger.exception(ex)
+                    VERIFY_SSL = False
                 if len(dynamic_playlist.playlists) > 0:
                     # Retrieve the real m3u8 playlist file from the dynamic one
                     for playlist in dynamic_playlist.playlists:
                         # Check if we have each segment in the playlist file
                         playlist_data = m3u8.load(playlist.absolute_uri,
-                                                  verify_ssl=False)
+                                                  verify_ssl=VERIFY_SSL)
 
                         for audio_segment in playlist_data.segments:
                             # Since the playlist changes names dynamically we use the
