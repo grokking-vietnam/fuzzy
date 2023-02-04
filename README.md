@@ -9,16 +9,38 @@
 ### Radio Data Collector
 
 ```mermaid
-flowchart TB
-    c1-->a2
-    subgraph one
-    a1-->a2
+flowchart TD
+    subgraph Collect
+        src_1([voh-95.6])
+        src_2([vov-giaothong-hcm])
+        src_3([...])
+
+        fs_1[(SeaweedFS)]
+
+        compute_1[[M3U8 Fetcher]]
+        compute_2[[FFMPEG]]
+
+        src_1-->compute_1
+        src_2-->compute_1
+        src_3-->compute_1
+        compute_1-->|audio file|compute_2
+        compute_2-->|mono & 16khz .aac|fs_1
     end
-    subgraph two
-    b1-->b2
+
+    subgraph Compaction
+    fs_2[(S3)]
+
+    compute_3[[Tar Compressor]]
+    compute_4[[Cleaner]]
+
+    fs_1-->compute_3
+    compute_3-->|Hourly block .tar.gz|fs_2
+    compute_4<-.->|Remove expired files TTL|fs_1
     end
-    subgraph three
-    c1-->c2
+
+    subgraph Monitor
+    alert(Telegram)
+    compute_1-.->alert
     end
 ```
 
