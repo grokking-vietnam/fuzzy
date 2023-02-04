@@ -27,7 +27,7 @@ flowchart TD
         compute_2-->|mono & 16khz .aac|fs_1
     end
 
-    subgraph Compaction
+    subgraph Compact
     fs_2[(S3)]
 
     compute_3[[Tar Compressor]]
