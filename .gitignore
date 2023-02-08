@@ -6,4 +6,5 @@
 *.log
 *.pyc
 *.tar.gz
+*.txt
 *.wav

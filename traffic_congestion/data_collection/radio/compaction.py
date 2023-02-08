@@ -17,29 +17,34 @@ sys.path.append(
     Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
 
 from utils.aws import delete_blob, download_blob, list_blob, write_file_to_s3
+from utils.gcp import write_file_to_gdrive
 
 # AWS
 BUCKET_NAME = "radio-project"
 TTL = 14  # days
 
+# GCP
+CREDENTIAL_FILENAME = "grokking-ai.json"
+ROOT_FOLDER_ID = "1d7WyTcSIOW5s2HT7bxySCJxpP-xXukPA"
+
 # Logger
 logger = logging.getLogger("fetch_hls_stream")
 
 
-def compress(output: str, filepaths: List[str]) -> None:
+def compress(output: str, file_paths: List[str]) -> None:
     """Compresses files into tar file."""
 
-    def delete_file(filepath: str):
-        os.remove(filepath)
+    def delete_file(file_path: str):
+        os.remove(file_path)
 
     # Compress to tar file
-    filepaths = [
-        filepath for filepath in filepaths if os.path.exists(filepath)
+    file_paths = [
+        file_path for file_path in file_paths if os.path.exists(file_path)
     ]
     with tarfile.open(output, "w:gz") as archive:
-        for filepath in filepaths:
-            with io.BytesIO(open(filepath, "rb").read()) as f:
-                info = tarfile.TarInfo(os.path.basename(filepath))
+        for file_path in file_paths:
+            with io.BytesIO(open(file_path, "rb").read()) as f:
+                info = tarfile.TarInfo(os.path.basename(file_path))
                 f.seek(0, io.SEEK_END)
                 info.size = f.tell()
                 f.seek(0, io.SEEK_SET)
@@ -49,6 +54,13 @@ def compress(output: str, filepaths: List[str]) -> None:
     if os.path.getsize(output) < 1e7:
         logger.warning(f"This tar file {output} is less than 10 MB.")
     else:
+        # Upload to Google Drive
+        write_file_to_gdrive(
+            credential_filename=CREDENTIAL_FILENAME,
+            root_folder_id=ROOT_FOLDER_ID,
+            file_path=output,
+        )
+
         # Upload to AWS S3
         write_file_to_s3(bucket_name=BUCKET_NAME,
                          file_name=output,
@@ -57,8 +69,8 @@ def compress(output: str, filepaths: List[str]) -> None:
 
     # Clean up
     with ThreadPoolExecutor(100) as p:
-        _ = [p.submit(delete_file, filepath) for filepath in filepaths]
-    delete_file(filepath=output)
+        _ = [p.submit(delete_file, file_path) for file_path in file_paths]
+    delete_file(file_path=output)
 
 
 def main(channel: str, running_hours=range(6, 22)) -> None:
@@ -99,32 +111,32 @@ def main(channel: str, running_hours=range(6, 22)) -> None:
             aws_keys = set([])
 
         s3_compress = {
-            key: filepaths
-            for key, filepaths in s3_compress.items() if key not in aws_keys
+            key: file_paths
+            for key, file_paths in s3_compress.items() if key not in aws_keys
         }  # compressed and uploaded to AWS S3 or not?
 
         # Get files to local disk
-        for key, filepaths in s3_compress.items():
+        for key, file_paths in s3_compress.items():
             logger.info(key)
             with ThreadPoolExecutor(10) as p:
                 _ = [
-                    p.submit(download_blob, BUCKET_NAME, filepath, "seaweedfs")
-                    for filepath in filepaths
+                    p.submit(download_blob, BUCKET_NAME, file_path,
+                             "seaweedfs") for file_path in file_paths
                 ]
 
         # Compress files to 1 hour block
-        for key, filepaths in s3_compress.items():
+        for key, file_paths in s3_compress.items():
             try:
                 compress(output="/".join(key.split("|")) + ".tar.gz",
-                         filepaths=filepaths)
+                         file_paths=file_paths)
             except Exception as ex:
                 logger.exception(ex)
 
         # Remove garbage files
         with ThreadPoolExecutor(10) as p:
             _ = [
-                p.submit(delete_blob, BUCKET_NAME, filepath)
-                for filepath in s3_garbage
+                p.submit(delete_blob, BUCKET_NAME, file_path)
+                for file_path in s3_garbage
             ]
 
 

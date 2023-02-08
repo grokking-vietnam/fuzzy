@@ -54,7 +54,7 @@ def write_file_to_s3(bucket_name: str,
         _ = client.upload_file(file_name, bucket_name, object_name)
         logger.info(f"UPLOADED {object_name} to S3 [{backend}]")
     except ClientError as ex:
-        logger.error(ex)
+        logger.exception(ex)
 
 
 def write_buf_to_s3(contents: bytes,
@@ -73,7 +73,7 @@ def write_buf_to_s3(contents: bytes,
         _ = client.upload_fileobj(buf, bucket_name, object_name)
         logger.info(f"UPLOADED {object_name} to S3 [{backend}]")
     except ClientError as ex:
-        logger.error(ex)
+        logger.exception(ex)
 
 
 def list_blob(bucket_name: str,
@@ -89,7 +89,8 @@ def list_blob(bucket_name: str,
         blobs.append(blob)
         files_not_found = False
     if files_not_found:
-        print("ALERT", "No file in {0}/{1}".format(bucket, prefix))
+        print("ALERT", "No file in {0}/{1} {2}".format(bucket, prefix,
+                                                       backend))
 
     if blobs:
         return blobs
@@ -119,4 +120,4 @@ def delete_blob(bucket_name: str,
     try:
         client.delete_object(Bucket=bucket_name, Key=object_name)
     except ClientError as ex:
-        logger.error(ex)
+        logger.exception(ex)
