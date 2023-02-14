@@ -24,8 +24,8 @@ BUCKET_NAME = "radio-project"
 TTL = 14  # days
 
 # GCP
-CREDENTIAL_FILENAME = "grokking-ai.json"
-ROOT_FOLDER_ID = "1d7WyTcSIOW5s2HT7bxySCJxpP-xXukPA"
+CREDENTIAL_FILENAME = os.getenv("GCP_CREDENTIAL_FILENAME")
+ROOT_FOLDER_ID = os.getenv("GDRIVE_ROOT_FOLDER_ID")
 
 # Logger
 logger = logging.getLogger("fetch_hls_stream")
