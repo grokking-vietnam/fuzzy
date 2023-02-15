@@ -29,7 +29,6 @@ flowchart TD
 
     subgraph Compact
     fs_2[(S3 Glacier)]
-    fs_3[(GDrive)]
 
     compute_3[[Tar Compressor]]
     compute_4[[Cleaner]]
@@ -37,7 +36,6 @@ flowchart TD
     fs_1-->compute_3
     compute_3-->|Hourly block .tar.gz|fs_2
     compute_4<-.->|Remove expired files TTL|fs_1
-    compute_3-->|Hourly block .tar.gz|fs_3
     end
 
     subgraph Monitor
@@ -45,22 +43,26 @@ flowchart TD
     compute_1-.->alert
     end
 
+    subgraph IPFS-Central
+        ipfs_1{{IPFS Node}}
+
+        compute_3-->ipfs_1
+    end
+
     subgraph Milkrun
-        subgraph ap-southeast
-            compute_5[[Scheduler]]
+        fs_3[(Cloudflare R2)]
 
-            ipfs_1{{IPFS Node}}
+        compute_5[[Scheduler]]
 
-            fs_3-->compute_5
-            compute_5-->ipfs_1
-        end
+        ipfs_1-->compute_5
+        compute_5-->fs_3
     end
 
     consumer_1[/Kaggle GPU/]
     consumer_2[/Colab GPU/]
 
-    ipfs_1-->consumer_1
-    ipfs_1-->consumer_2
+    fs_3-->consumer_1
+    fs_3-->consumer_2
 ```
 
 ---
