@@ -28,7 +28,7 @@ flowchart TD
     end
 
     subgraph Compact
-    fs_2[(S3)]
+    fs_2[(S3 Glacier)]
 
     compute_3[[Tar Compressor]]
     compute_4[[Cleaner]]
@@ -42,6 +42,27 @@ flowchart TD
     alert(Telegram)
     compute_1-.->alert
     end
+
+    subgraph IPFS-Central
+        ipfs_1{{IPFS Node}}
+
+        compute_3-->ipfs_1
+    end
+
+    subgraph Milkrun
+        fs_3[(Cloudflare R2)]
+
+        compute_5[[Scheduler]]
+
+        ipfs_1-->compute_5
+        compute_5-->fs_3
+    end
+
+    consumer_1[/Kaggle GPU/]
+    consumer_2[/Colab GPU/]
+
+    fs_3-->consumer_1
+    fs_3-->consumer_2
 ```
 
 ---
