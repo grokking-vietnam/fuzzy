@@ -17,7 +17,6 @@ sys.path.append(
     Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
 
 from utils.aws import delete_blob, download_blob, list_blob, write_file_to_s3
-from utils.gcp import write_file_to_gdrive
 
 # AWS
 BUCKET_NAME = "radio-project"
@@ -54,13 +53,6 @@ def compress(output: str, file_paths: List[str]) -> None:
     if os.path.getsize(output) < 1e7:
         logger.warning(f"This tar file {output} is less than 10 MB.")
     else:
-        # Upload to Google Drive
-        write_file_to_gdrive(
-            credential_filename=CREDENTIAL_FILENAME,
-            root_folder_id=ROOT_FOLDER_ID,
-            file_path=output,
-        )
-
         # Upload to AWS S3
         write_file_to_s3(bucket_name=BUCKET_NAME,
                          file_name=output,
