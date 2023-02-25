@@ -17,7 +17,8 @@ export distro=focal # Ubuntu Server 20.04 LTS
 wget "https://cloud-images.ubuntu.com/${distro}/current/${distro}-server-cloudimg-amd64.img"
 
 apt update -y && apt install libguestfs-tools -y
-virt-customize -a ${distro}-server-cloudimg-amd64.img --install qemu-guest-agent
+virt-customize -a ${distro}-server-cloudimg-amd64.img --update
+virt-customize -a ${distro}-server-cloudimg-amd64.img --install qemu-guest-agent,wget,curl,telnet,unzip
 
 qm create 9000 --name "ubuntu-${distro}-cloudinit-template" --memory 2048 --cores 2 --net0 virtio,bridge=vmbr1
 qm importdisk 9000 ${distro}-server-cloudimg-amd64.img local-lvm
