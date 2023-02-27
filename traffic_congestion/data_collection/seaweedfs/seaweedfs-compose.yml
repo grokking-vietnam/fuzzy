@@ -9,13 +9,23 @@ services:
       - 9324:9324
     command: master -ip=master -ip.bind=0.0.0.0 -metricsPort=9324 -volumeSizeLimitMB=1000
     restart: always
-  volume:
+  volume_01:
     image: chrislusf/seaweedfs # use a remote image
     ports:
       - 8080:8080
       - 18080:18080
-      - 9325:9325
-    command: volume -mserver="master:9333" -ip.bind=0.0.0.0 -port=8080 -metricsPort=9325 -max=50
+      - 9328:9328
+    command: volume -dir="/mnt" -mserver="master:9333" -ip.bind=0.0.0.0 -port=8080 -metricsPort=9328 -max=50
+    depends_on:
+      - master
+    restart: always
+  volume_02:
+    image: chrislusf/seaweedfs # use a remote image
+    ports:
+      - 8081:8081
+      - 18081:18081
+      - 9329:9329
+    command: volume -dir="/mnt" -mserver="master:9333" -ip.bind=0.0.0.0 -port=8081 -metricsPort=9329 -max=50
     depends_on:
       - master
     restart: always
@@ -30,7 +40,8 @@ services:
     stdin_open: true
     depends_on:
       - master
-      - volume
+      - volume_01
+      - volume_02
     restart: always
   s3:
     image: chrislusf/seaweedfs # use a remote image
@@ -40,7 +51,8 @@ services:
     command: s3 -config=/etc/seaweedfs/s3.json -filer="filer:8888" -ip.bind=0.0.0.0 -metricsPort=9327
     depends_on:
       - master
-      - volume
+      - volume_01
+      - volume_02
       - filer
     volumes:
       - /etc/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
@@ -52,7 +64,8 @@ services:
     command: 'webdav -filer="filer:8888"'
     depends_on:
       - master
-      - volume
+      - volume_01
+      - volume_02
       - filer
     restart: always
   prometheus:
