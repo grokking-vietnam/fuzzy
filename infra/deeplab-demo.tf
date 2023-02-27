@@ -6,7 +6,7 @@ resource "proxmox_vm_qemu" "deeplab-demo" {
 
   agent = 1
 
-  clone   = "ubuntu-server-focal-docker"
+  clone   = "ubuntu-focal-cloudinit-template"
   cores   = 2
   sockets = 1
   cpu     = "host"
@@ -24,10 +24,35 @@ resource "proxmox_vm_qemu" "deeplab-demo" {
   }
 
   os_type    = "cloud-init"
-  ipconfig0  = "ip=11.11.1.86/255.255.255.0,gw=11.11.1.1"
+  ipconfig0  = "ip=11.11.1.88/16,gw=11.11.1.1"
   nameserver = "1.1.1.1"
-  ciuser     = "tqtensor"
+  ciuser     = "terrabot"
   sshkeys    = <<EOF
-    ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC0Ji3n1/qwVydGS8OoOpw5LDd0VOcUPPDhRSDmU4Rl3bMceK17jXBZBZz1dofDIJiOKqGRGbYcLxh0kha3epIGyia9Z+z0ZHQg0ByRzuNlpepZYUva5EssOjVekRZtC1NiROS1BREVPG1sSwORdW0KiVJ4UiT7eJRNZwAm/0TZWmLTYdLqMI4FoBp8bzCQPMUbPb27sU0xZB/m8P7xJaAj9dZfpQEvV8azd2cLKNX9R1Fohft0eFE7U3D9oO26CbbQRlAOm9lxSAON9KZp6aAS0I2eY44vBZiprGafl12C/zFdywhJ9D4VcURfncufLUeSAImklz96IL3OK4hurKYhMTGydb9HHN03zcw69gwWAqnVJn3Yx/NflLZE9DIvQzAZQiYu14r5CL2SWNwoS7ui9Y0mdjP3Ah4rwRIjq/37C92g/qph4kqI8XlRe5NgYwdwtEr8vkL3dT0RatJU+ZTIW/uXsAk4rQ1JQ+VplLucEGjzmLZtC/R4q/IaBmGmCOs= tqtensor
+    ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC1s3xm/TxBJ38g2jMlg1MseGEy7gYQ7++ofccdwgkuYkVMx/6+li4bimhlCcxfoWea1nqowoM8R/OkkJI2SSVjHEoIm1i9cfZ+VADzoDGuHvGpqud/TQqsskiryQv8hx8upKbvAHRYt8c1YJTEKrWYJd6UW9xIg/+IwyqzlScHeNeomxKFPy3j7GBeAzzh3R+tVVWLajNqUIuHBxmlUkHU4Ko6B/YQziI1PLQXesvLK3/ab/XRlkWh6ZIrK6/xYF+rs/MGUZD43nZrpBUFH4u0ht7uUCrdcVxUoaHZcnKk5qF3nvDzzL2K9SqyY6NfOUjnpXxDSNFh5unzwkNfqTr/3mDoDeXonxrd3QaEKjgZzqkyZ4YwNGGfFxGhFsUwyLa6MJ3KGE98hTmMGtYnAuGqvBQf1BVKhcVzXjK8R37nEayNXZT163felTWgNnSnspRNMnpx5epIIvlCODIundCMTLF8zneIsRUk5NLebmpKbSS+799BtH4UMZax2kW2yzk= terrabot
     EOF
+
+  connection {
+    type        = "ssh"
+    user        = self.ciuser
+    private_key = file("~/.ssh/terrabot")
+    host        = "11.11.1.88"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo apt-get -qq update",
+      "sudo apt-get -qq install ca-certificates curl gnupg lsb-release -y",
+      "sudo mkdir -m 0755 -p /etc/apt/keyrings",
+      "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg",
+      "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
+      "sudo apt-get update",
+      "sleep 15",
+      "sudo apt-get -qq install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y",
+      "sudo usermod --append --groups docker \"$USER\"",
+      "sudo systemctl enable docker",
+      "printf '\nDocker installed successfully\n\n'",
+      "printf 'Waiting for Docker to start...\n\n'",
+      "sleep 5"
+    ]
+  }
 }
