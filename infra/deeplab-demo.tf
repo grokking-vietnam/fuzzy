@@ -7,6 +7,7 @@ resource "proxmox_vm_qemu" "deeplab-demo" {
   agent = 1
 
   clone   = "ubuntu-focal-cloudinit-template"
+  machine = "q35"
   cores   = 2
   sockets = 1
   cpu     = "host"
@@ -21,6 +22,12 @@ resource "proxmox_vm_qemu" "deeplab-demo" {
     storage = "local-lvm"
     type    = "virtio"
     size    = "20G"
+  }
+
+  hostpci {
+    host   = "0000:02:00.0"
+    rombar = 1
+    pcie   = 1
   }
 
   os_type    = "cloud-init"
