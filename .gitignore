@@ -2,12 +2,12 @@
 infra/.terraform
 
 *.aac
+*credentials*
 .env*
 *.json
 *.gstmp
 *.log
 *.pyc
 *.tar.gz
-*.tfvars
 *.txt
 *.wav
