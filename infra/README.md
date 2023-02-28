@@ -9,7 +9,7 @@ proxmox_api_token_id = "root@pam!terraform"
 proxmox_api_token_secret = ""
 ```
 
-## Prepare Ubuntu Cloud Init image
+## Prepare Ubuntu Cloud Init Image (with GPU)
 https://austinsnerdythings.com/2021/08/30/how-to-create-a-proxmox-ubuntu-cloud-init-image/
 
 ```bash
@@ -27,7 +27,11 @@ qm set 9000 --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-9000-disk-0
 qm set 9000 --boot c --bootdisk scsi0
 qm set 9000 --ide2 local-lvm:cloudinit
 qm set 9000 --serial0 socket --vga serial0
+qm set 9000 --hostpci0 0000:02:00,pcie=1,rombar=1
 qm set 9000 --agent enabled=1
 
 qm template 9000
 ```
+
+## Errors
+1. bool is required -> https://github.com/Telmate/terraform-provider-proxmox/issues/681
