@@ -5,6 +5,7 @@ provider "registry.terraform.io/telmate/proxmox" {
   version     = "2.9.13"
   constraints = "2.9.13"
   hashes = [
+    "h1:u9yr+S7Nu+Qtwdxq3bD/Pl6fSPGq8WRHbIBtGuzU/SQ=",
     "h1:uZSckvFs6leTHnCilpcz70PP0jzA1NUIaWe/dxUHaY8=",
     "zh:1df5140fc89321608f53ce6a7dee284f3893eb4e4fa15344e2baa98c24809c78",
     "zh:353436d422e29d280d501c37fdf3d19abc897ea8cfcbc0045ed30bd5fa69f7e0",

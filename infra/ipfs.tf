@@ -1,16 +1,16 @@
-resource "proxmox_vm_qemu" "deeplab" {
-  name        = "deeplab"
-  desc        = "GPU Ubuntu Server"
-  vmid        = 401
+resource "proxmox_vm_qemu" "ipfs" {
+  name        = "ipfs"
+  desc        = "IPFS Ubuntu Server"
+  vmid        = 402
   target_node = "hpz440"
 
   agent = 1
 
-  clone   = "ubuntu-focal-q35-template"
+  clone   = "ubuntu-focal-template"
   cores   = 4
   sockets = 1
   cpu     = "host"
-  memory  = 65536
+  memory  = 20480
   balloon = 2048
 
   network {
@@ -20,13 +20,13 @@ resource "proxmox_vm_qemu" "deeplab" {
   }
 
   disk {
-    storage = "local-lvm"
+    storage = "torrent"
     type    = "virtio"
-    size    = "80G"
+    size    = "400G"
   }
 
   os_type    = "cloud-init"
-  ipconfig0  = "ip=11.11.1.88/16,gw=11.11.1.1"
+  ipconfig0  = "ip=11.11.1.89/16,gw=11.11.1.1"
   nameserver = "1.1.1.1"
   ciuser     = "terrabot"
   sshkeys    = <<EOF
@@ -37,7 +37,7 @@ resource "proxmox_vm_qemu" "deeplab" {
     type        = "ssh"
     user        = self.ciuser
     private_key = file("~/.ssh/terrabot")
-    host        = "11.11.1.88"
+    host        = "11.11.1.89"
   }
 
   provisioner "remote-exec" {
@@ -54,16 +54,6 @@ resource "proxmox_vm_qemu" "deeplab" {
       "sudo systemctl enable docker",
       "printf '\nDocker installed successfully\n\n'",
       "printf 'Waiting for Docker to start...\n\n'",
-      "sleep 5"
-    ]
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb",
-      "sudo dpkg -i cuda-keyring_1.0-1_all.deb",
-      "sudo apt-get -qq update",
-      "sudo apt-get -qq -y install cuda",
       "sleep 5"
     ]
   }
