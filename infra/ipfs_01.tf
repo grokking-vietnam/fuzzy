@@ -1,5 +1,5 @@
-resource "proxmox_vm_qemu" "ipfs" {
-  name        = "ipfs"
+resource "proxmox_vm_qemu" "ipfs-01" {
+  name        = "ipfs-01"
   desc        = "IPFS Ubuntu Server"
   vmid        = 402
   target_node = "hpz440"
@@ -40,22 +40,15 @@ resource "proxmox_vm_qemu" "ipfs" {
     host        = "11.11.1.89"
   }
 
+  provisioner "file" {
+    source      = "install_docker.sh"
+    destination = "/tmp/install_docker.sh"
+  }
+
   provisioner "remote-exec" {
     inline = [
-      "sudo apt-get -qq update",
-      "sudo apt-get -qq -y install ca-certificates curl gnupg lsb-release",
-      "sudo mkdir -m 0755 -p /etc/apt/keyrings",
-      "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg",
-      "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
-      "sudo apt-get update",
-      "sleep 60",
-      "sudo apt-get -qq -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin",
-      "sudo usermod --append --groups docker \"$USER\"",
-      "sudo systemctl enable docker",
-      "sudo apt-get -qq -y install docker-compose-plugin",
-      "printf '\nDocker installed successfully\n\n'",
-      "printf 'Waiting for Docker to start...\n\n'",
-      "sleep 5"
+      "sudo chmod +x /tmp/install_docker.sh",
+      "/tmp/install_docker.sh",
     ]
   }
 }
