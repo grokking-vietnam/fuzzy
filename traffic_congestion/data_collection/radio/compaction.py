@@ -17,6 +17,7 @@ sys.path.append(
     Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
 
 from utils.aws import delete_blob, download_blob, list_blob, write_file_to_s3
+from utils.ipfs import write_file_to_ipfs
 
 # AWS
 BUCKET_NAME = "radio-project"
@@ -58,6 +59,9 @@ def compress(output: str, file_paths: List[str]) -> None:
                          file_name=output,
                          object_name=output,
                          backend="aws")
+
+        # Upload to IPFS
+        write_file_to_ipfs(file_path=output)
 
     # Clean up
     with ThreadPoolExecutor(100) as p:

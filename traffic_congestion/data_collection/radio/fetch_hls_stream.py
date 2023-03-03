@@ -33,7 +33,7 @@ logger = logging.getLogger("fetch_hls_stream")
 BUCKET_NAME = "radio-project"
 
 # Running hours
-RUNNING_HOURS = range(6, 22)
+RUNNING_HOURS = range(6, 7)
 
 
 def setuplog(verbose):
