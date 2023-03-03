@@ -1,8 +1,8 @@
-resource "proxmox_vm_qemu" "ipfs-01" {
-  name        = "ipfs-01"
-  desc        = "IPFS Ubuntu Server"
-  vmid        = 402
-  target_node = "hpz440"
+resource "proxmox_vm_qemu" "seaweedfs-02" {
+  name        = "seaweedfs-02"
+  desc        = "SeaweedFS Ubuntu Server"
+  vmid        = 403
+  target_node = "hpprobook"
 
   agent = 1
 
@@ -10,23 +10,23 @@ resource "proxmox_vm_qemu" "ipfs-01" {
   cores   = 4
   sockets = 1
   cpu     = "host"
-  memory  = 20480
+  memory  = 14336
   balloon = 2048
 
   network {
-    bridge   = "vmbr1"
+    bridge   = "vmbr0"
     model    = "virtio"
     firewall = true
   }
 
   disk {
-    storage = "torrent"
+    storage = "local-lvm"
     type    = "virtio"
     size    = "400G"
   }
 
   os_type    = "cloud-init"
-  ipconfig0  = "ip=11.11.1.89/16,gw=11.11.1.1"
+  ipconfig0  = "ip=11.11.1.90/16,gw=11.11.1.1"
   nameserver = "1.1.1.1"
   ciuser     = "terrabot"
   sshkeys    = <<EOF
@@ -37,7 +37,7 @@ resource "proxmox_vm_qemu" "ipfs-01" {
     type        = "ssh"
     user        = self.ciuser
     private_key = file("~/.ssh/terrabot")
-    host        = "11.11.1.89"
+    host        = "11.11.1.90"
   }
 
   provisioner "file" {
@@ -49,6 +49,18 @@ resource "proxmox_vm_qemu" "ipfs-01" {
     inline = [
       "sudo chmod +x /tmp/install_docker.sh",
       "/tmp/install_docker.sh",
+    ]
+  }
+
+  provisioner "file" {
+    source      = "install_conda.sh"
+    destination = "/tmp/install_conda.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo chmod +x /tmp/install_conda.sh",
+      "/tmp/install_conda.sh",
     ]
   }
 }

@@ -10,7 +10,7 @@ resource "proxmox_vm_qemu" "radio" {
   cores   = 4
   sockets = 1
   cpu     = "host"
-  memory  = 4096
+  memory  = 20480
   balloon = 2048
 
   network {
@@ -49,6 +49,18 @@ resource "proxmox_vm_qemu" "radio" {
     inline = [
       "sudo chmod +x /tmp/install_docker.sh",
       "/tmp/install_docker.sh",
+    ]
+  }
+
+  provisioner "file" {
+    source      = "install_conda.sh"
+    destination = "/tmp/install_conda.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo chmod +x /tmp/install_conda.sh",
+      "/tmp/install_conda.sh",
     ]
   }
 }
