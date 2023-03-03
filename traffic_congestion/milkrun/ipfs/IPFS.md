@@ -7,5 +7,5 @@
 
 ```bash
 source .env
-docker compose -f docker-compose.yml up -d
+docker compose -f ipfs-compose.yml up -d
 ```
