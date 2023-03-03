@@ -18,6 +18,8 @@ services:
     command: volume -dir="/mnt" -mserver="master:9333" -ip.bind=0.0.0.0 -port=8080 -metricsPort=9328 -max=50
     depends_on:
       - master
+    volumes:
+      - /var/seaweedfs/volume_01:/mnt
     restart: always
   volume_02:
     image: chrislusf/seaweedfs # use a remote image
@@ -28,6 +30,8 @@ services:
     command: volume -dir="/mnt" -mserver="master:9333" -ip.bind=0.0.0.0 -port=8081 -metricsPort=9329 -max=50
     depends_on:
       - master
+    volumes:
+      - /var/seaweedfs/volume_02:/mnt
     restart: always
   filer:
     image: chrislusf/seaweedfs # use a remote image
