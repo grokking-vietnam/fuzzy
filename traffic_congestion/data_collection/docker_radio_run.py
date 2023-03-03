@@ -35,7 +35,7 @@ if __name__ == "__main__":
 
     # Start SeaweedFS
     seaweedfs_cmd = """
-    docker compose -f seaweedfs/seaweedfs-compose.yml -p seaweedfs up -d
+    docker compose -f seaweedfs/seaweedfs-compose.yml -p seaweedfs up -d && sleep 60
     """
     run_cmd(cmd=seaweedfs_cmd)
     try:
