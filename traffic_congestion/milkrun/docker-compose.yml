@@ -39,8 +39,12 @@ services:
       - "4001:4001" # ipfs swarm - expose if needed/wanted
       - "5001:5001" # ipfs api - expose if needed/wanted
       - "8080:8080" # ipfs gateway - expose if needed/wanted
+    environment:
+      - LIBP2P_FORCE_PNET=1
+      - IPFS_SWARM_KEY_FILE=/data/ipfs/swarm.key
     volumes:
       - ./compose/ipfs0:/data/ipfs
+      - ./swarm.key:/data/ipfs/swarm.key
 
   cluster0:
     container_name: cluster0
@@ -73,8 +77,12 @@ services:
   ipfs1:
     container_name: ipfs1
     image: ipfs/kubo:release
+    environment:
+      - LIBP2P_FORCE_PNET=1
+      - IPFS_SWARM_KEY_FILE=/data/ipfs/swarm.key
     volumes:
       - ./compose/ipfs1:/data/ipfs
+      - ./swarm.key:/data/ipfs/swarm.key
 
   cluster1:
     container_name: cluster1
@@ -98,8 +106,12 @@ services:
   ipfs2:
     container_name: ipfs2
     image: ipfs/kubo:release
+    environment:
+      - LIBP2P_FORCE_PNET=1
+      - IPFS_SWARM_KEY_FILE=/data/ipfs/swarm.key
     volumes:
-      - ./compose/ipfs2:/data/ipfs
+      - ./compose/ipfs1:/data/ipfs
+      - ./swarm.key:/data/ipfs/swarm.key
 
   cluster2:
     container_name: cluster2
