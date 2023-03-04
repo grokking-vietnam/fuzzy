@@ -52,15 +52,6 @@ def compress(output: str, file_paths: List[str]) -> None:
     if os.path.getsize(output) < 1e7:
         logger.warning(f"This tar file {output} is less than 10 MB.")
     else:
-        # Upload SeaweedFS Cluster S3
-        write_file_to_s3(
-            bucket_name=BUCKET_NAME,
-            file_name=output,
-            object_name=output,
-            backend="seaweedfs_cluster",
-            s3_hosts=SEAWEEDFS_HOSTS,
-        )
-
         # Upload to AWS S3
         write_file_to_s3(
             bucket_name=BUCKET_NAME,
@@ -68,6 +59,15 @@ def compress(output: str, file_paths: List[str]) -> None:
             object_name=output,
             backend="aws",
             ExtraArgs={"StorageClass": "DEEP_ARCHIVE"},
+        )
+
+        # Upload SeaweedFS Cluster S3
+        write_file_to_s3(
+            bucket_name=BUCKET_NAME,
+            file_name=output,
+            object_name=output,
+            backend="seaweedfs_cluster",
+            s3_hosts=SEAWEEDFS_HOSTS,
         )
 
     # Clean up
