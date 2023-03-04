@@ -3,10 +3,10 @@ Simple program to build and run Docker containers for each radio channel.
 """
 
 import subprocess
+import time
 
 import yaml
 from radio.utils.aws import create_client
-import time
 
 # AWS
 BUCKET_NAME = "radio-project"
