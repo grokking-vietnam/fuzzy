@@ -17,15 +17,13 @@ sys.path.append(
     Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
 
 from utils.aws import delete_blob, download_blob, list_blob, write_file_to_s3
-from utils.ipfs import write_file_to_ipfs
 
 # AWS
 BUCKET_NAME = "radio-project"
 TTL = 14  # days
 
-# GCP
-CREDENTIAL_FILENAME = os.getenv("GCP_CREDENTIAL_FILENAME")
-ROOT_FOLDER_ID = os.getenv("GDRIVE_ROOT_FOLDER_ID")
+# SeaweedFS Cluster
+SEAWEEDFS_HOSTS = ["11.11.1.89", "11.11.1.90"]
 
 # Logger
 logger = logging.getLogger("fetch_hls_stream")
@@ -54,14 +52,23 @@ def compress(output: str, file_paths: List[str]) -> None:
     if os.path.getsize(output) < 1e7:
         logger.warning(f"This tar file {output} is less than 10 MB.")
     else:
-        # Upload to AWS S3
-        write_file_to_s3(bucket_name=BUCKET_NAME,
-                         file_name=output,
-                         object_name=output,
-                         backend="aws")
+        # Upload SeaweedFS Cluster S3
+        write_file_to_s3(
+            bucket_name=BUCKET_NAME,
+            file_name=output,
+            object_name=output,
+            backend="seaweedfs_cluster",
+            s3_hosts=SEAWEEDFS_HOSTS,
+        )
 
-        # Upload to IPFS
-        write_file_to_ipfs(file_path=output)
+        # Upload to AWS S3
+        write_file_to_s3(
+            bucket_name=BUCKET_NAME,
+            file_name=output,
+            object_name=output,
+            backend="aws",
+            ExtraArgs={"StorageClass": "DEEP_ARCHIVE"},
+        )
 
     # Clean up
     with ThreadPoolExecutor(100) as p:
@@ -70,7 +77,8 @@ def compress(output: str, file_paths: List[str]) -> None:
 
 
 def main(channel: str, running_hours=range(6, 22)) -> None:
-    """Compresses files into 1 hour block and upload to AWS S3."""
+    """Compresses files into 1 hour block and upload to AWS S3 Glacier
+    and SeaweedFS Cluster S3."""
     # Get list of all files from SeaweedFS S3
     blobs = list_blob(bucket_name=BUCKET_NAME, prefix=f"{channel}/")
 
@@ -94,22 +102,23 @@ def main(channel: str, running_hours=range(6, 22)) -> None:
             else:
                 s3_garbage.append(blob.key)
 
-        # Get list of all files from AWS S3
-        aws_blobs = list_blob(bucket_name=BUCKET_NAME,
-                              prefix=f"{channel}/",
-                              backend="aws")
-        if aws_blobs:
-            aws_keys = set([
+        # Get list of all files from SeaweedFS Cluster S3
+        seaweedfs_cluster_blobs = list_blob(bucket_name=BUCKET_NAME,
+                                            prefix=f"{channel}/",
+                                            backend="seaweedfs_cluster")
+        if seaweedfs_cluster_blobs:
+            seaweedfs_cluster_keys = set([
                 blob.key.replace(".tar.gz", "").replace("/", "|")
-                for blob in aws_blobs
+                for blob in seaweedfs_cluster_blobs
             ])
         else:
-            aws_keys = set([])
+            seaweedfs_cluster_keys = set([])
 
         s3_compress = {
             key: file_paths
-            for key, file_paths in s3_compress.items() if key not in aws_keys
-        }  # compressed and uploaded to AWS S3 or not?
+            for key, file_paths in s3_compress.items()
+            if key not in seaweedfs_cluster_keys
+        }  # compressed and uploaded to SeaweedFS Cluster S3 or not?
 
         # Get files to local disk
         for key, file_paths in s3_compress.items():

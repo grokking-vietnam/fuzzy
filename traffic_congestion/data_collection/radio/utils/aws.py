@@ -53,6 +53,7 @@ def write_file_to_s3(
     object_name: str,
     backend: str = "seaweedfs",
     s3_hosts: List[str] = ["seaweedfs"],
+    **kwrgs,
 ) -> None:
     """Writes data to S3, either on SeaweedFS or AWS."""
     if backend == "seaweedfs_cluster":
@@ -65,7 +66,8 @@ def write_file_to_s3(
 
     for client in clients:
         try:
-            _ = client.upload_file(file_name, bucket_name, object_name)
+            _ = client.upload_file(file_name, bucket_name, object_name,
+                                   **kwrgs)
             logger.info(f"UPLOADED {object_name} to S3 [{backend}]")
         except ClientError as ex:
             logger.exception(ex)
