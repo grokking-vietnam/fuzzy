@@ -37,6 +37,7 @@ if __name__ == "__main__":
             if "BucketAlreadyExists" not in str(ex):
                 print(ex)
             else:
+                print(f"Bucket {BUCKET_NAME} created")
                 break
 
     if build_radio_images.lower() == "y":
