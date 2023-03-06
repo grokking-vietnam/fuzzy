@@ -2,8 +2,9 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.append(Path(
-    __file__).parent.parent.absolute().as_posix())  # Add radio/ to root path
+sys.path.append(
+    Path(__file__).parent.parent.absolute().as_posix()
+)  # Add radio/ to root path
 
 from utils.notification import telebot_send_message
 

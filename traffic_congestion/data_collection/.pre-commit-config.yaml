@@ -6,20 +6,15 @@ repos:
       - id: trailing-whitespace
       - id: check-added-large-files
   - repo: https://github.com/pycqa/isort
-    rev: 5.10.1
+    rev: 5.6.4
     hooks:
       - id: isort
-        name: isort (python)
-  - repo: https://github.com/google/yapf
-    rev: v0.32.0
+        args: ['--profile', 'black']
+  - repo: https://github.com/ambv/black
+    rev: 22.3.0
     hooks:
-      - id: yapf
-        name: yapf
-        additional_dependencies: [toml]
-        language: python
-        entry: yapf
-        args: [-i, -vv]
-        types: [python]
+      - id: black
+        language_version: python3
   - repo: https://github.com/python-poetry/poetry
     rev: '1.2.2'
     hooks:

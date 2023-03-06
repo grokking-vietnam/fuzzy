@@ -9,8 +9,9 @@ from typing import List, Optional
 import boto3
 from botocore.exceptions import ClientError
 
-sys.path.append(Path(
-    __file__).parent.parent.absolute().as_posix())  # Add radio/ to root path
+sys.path.append(
+    Path(__file__).parent.parent.absolute().as_posix()
+)  # Add radio/ to root path
 
 from configs import S3Configuration
 
@@ -58,16 +59,14 @@ def write_file_to_s3(
     """Writes data to S3, either on SeaweedFS or AWS."""
     if backend == "seaweedfs_cluster":
         clients = [
-            create_client(backend="seaweedfs", s3_host=s3_host)
-            for s3_host in s3_hosts
+            create_client(backend="seaweedfs", s3_host=s3_host) for s3_host in s3_hosts
         ]
     else:
         clients = [create_client(backend=backend)]
 
     for client in clients:
         try:
-            _ = client.upload_file(file_name, bucket_name, object_name,
-                                   **kwrgs)
+            _ = client.upload_file(file_name, bucket_name, object_name, **kwrgs)
             logger.info(f"UPLOADED {object_name} to S3 [{backend}]")
         except ClientError as ex:
             logger.exception(ex)
@@ -83,8 +82,7 @@ def write_buf_to_s3(
     """Writes buffer to S3, either on SeaweedFS or AWS."""
     if backend == "seaweedfs_cluster":
         clients = [
-            create_client(backend="seaweedfs", s3_host=s3_host)
-            for s3_host in s3_hosts
+            create_client(backend="seaweedfs", s3_host=s3_host) for s3_host in s3_hosts
         ]
     else:
         clients = [create_client(backend=backend)]
@@ -111,9 +109,8 @@ def list_blob(
     """Lists the blobs inside a bucket with prefix."""
     if backend == "seaweedfs_cluster":
         s3s = [
-            create_client(service_type="resource",
-                          backend="seaweedfs",
-                          s3_host=s3_host) for s3_host in s3_hosts
+            create_client(service_type="resource", backend="seaweedfs", s3_host=s3_host)
+            for s3_host in s3_hosts
         ]
     else:
         s3s = [create_client(service_type="resource", backend=backend)]
@@ -127,8 +124,7 @@ def list_blob(
             blobs.append(blob)
             files_not_found = False
         if files_not_found:
-            print("ALERT",
-                  "No file in {0}/{1} {2}".format(bucket, prefix, backend))
+            print("ALERT", "No file in {0}/{1} {2}".format(bucket, prefix, backend))
 
     if blobs:
         return blobs
@@ -143,12 +139,10 @@ def download_blob(
     s3_hosts: List[str] = ["seaweedfs"],
 ) -> None:
     """Downloads blob from S3 to local file."""
-    random.shuffle(
-        s3_hosts)  # to randomly distribute read to different SeaweedFS node
+    random.shuffle(s3_hosts)  # to randomly distribute read to different SeaweedFS node
     if backend == "seaweedfs_cluster":
         clients = [
-            create_client(backend="seaweedfs", s3_host=s3_host)
-            for s3_host in s3_hosts
+            create_client(backend="seaweedfs", s3_host=s3_host) for s3_host in s3_hosts
         ]
     else:
         clients = [create_client(backend=backend)]
@@ -159,9 +153,7 @@ def download_blob(
     for client in clients:
         try:
             with open(object_name, "wb") as f:
-                client.download_fileobj(Bucket=bucket_name,
-                                        Key=object_name,
-                                        Fileobj=f)
+                client.download_fileobj(Bucket=bucket_name, Key=object_name, Fileobj=f)
             break
         except Exception as ex:
             logger.exception(ex)
@@ -176,8 +168,7 @@ def delete_blob(
     """Deletes blob on S3."""
     if backend == "seaweedfs_cluster":
         clients = [
-            create_client(backend="seaweedfs", s3_host=s3_host)
-            for s3_host in s3_hosts
+            create_client(backend="seaweedfs", s3_host=s3_host) for s3_host in s3_hosts
         ]
     else:
         clients = [create_client(backend=backend)]

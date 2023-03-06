@@ -13,8 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List
 
-sys.path.append(
-    Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
+sys.path.append(Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
 
 from utils.aws import delete_blob, download_blob, list_blob, write_file_to_s3
 
@@ -36,9 +35,7 @@ def compress(output: str, file_paths: List[str]) -> None:
         os.remove(file_path)
 
     # Compress to tar file
-    file_paths = [
-        file_path for file_path in file_paths if os.path.exists(file_path)
-    ]
+    file_paths = [file_path for file_path in file_paths if os.path.exists(file_path)]
     with tarfile.open(output, "w:gz") as archive:
         for file_path in file_paths:
             with io.BytesIO(open(file_path, "rb").read()) as f:
@@ -89,28 +86,30 @@ def main(channel: str, running_hours=range(6, 22)) -> None:
         for blob in blobs:
             _, year, month, day, filename = blob.key.split("/")
             hour = filename.split("_")[0]
-            ymdh = datetime.datetime(int(year), int(month), int(day),
-                                     int(hour))
+            ymdh = datetime.datetime(int(year), int(month), int(day), int(hour))
             if int(hour) + 7 in running_hours:
-                if (datetime.datetime.utcnow() -
-                        ymdh).total_seconds() > 2 * 3600:
-                    s3_compress["|".join([channel, year, month, day,
-                                          hour])].append(blob.key)
-                if (datetime.datetime.utcnow() -
-                        ymdh).total_seconds() > TTL * 24 * 3600:
+                if (datetime.datetime.utcnow() - ymdh).total_seconds() > 2 * 3600:
+                    s3_compress["|".join([channel, year, month, day, hour])].append(
+                        blob.key
+                    )
+                if (
+                    datetime.datetime.utcnow() - ymdh
+                ).total_seconds() > TTL * 24 * 3600:
                     s3_garbage.append(blob.key)
             else:
                 s3_garbage.append(blob.key)
 
         # Get list of all files from SeaweedFS Cluster S3
-        seaweedfs_cluster_blobs = list_blob(bucket_name=BUCKET_NAME,
-                                            prefix=f"{channel}/",
-                                            backend="seaweedfs_cluster")
+        seaweedfs_cluster_blobs = list_blob(
+            bucket_name=BUCKET_NAME, prefix=f"{channel}/", backend="seaweedfs_cluster"
+        )
         if seaweedfs_cluster_blobs:
-            seaweedfs_cluster_keys = set([
-                blob.key.replace(".tar.gz", "").replace("/", "|")
-                for blob in seaweedfs_cluster_blobs
-            ])
+            seaweedfs_cluster_keys = set(
+                [
+                    blob.key.replace(".tar.gz", "").replace("/", "|")
+                    for blob in seaweedfs_cluster_blobs
+                ]
+            )
         else:
             seaweedfs_cluster_keys = set([])
 
@@ -125,15 +124,16 @@ def main(channel: str, running_hours=range(6, 22)) -> None:
             logger.info(key)
             with ThreadPoolExecutor(10) as p:
                 _ = [
-                    p.submit(download_blob, BUCKET_NAME, file_path,
-                             "seaweedfs") for file_path in file_paths
+                    p.submit(download_blob, BUCKET_NAME, file_path, "seaweedfs")
+                    for file_path in file_paths
                 ]
 
         # Compress files to 1 hour block
         for key, file_paths in s3_compress.items():
             try:
-                compress(output="/".join(key.split("|")) + ".tar.gz",
-                         file_paths=file_paths)
+                compress(
+                    output="/".join(key.split("|")) + ".tar.gz", file_paths=file_paths
+                )
             except Exception as ex:
                 logger.exception(ex)
 

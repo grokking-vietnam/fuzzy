@@ -13,8 +13,7 @@ import ffmpeg
 import m3u8
 from requests import get
 
-sys.path.append(
-    Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
+sys.path.append(Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
 
 from compaction import main as compaction_main
 from utils.aws import list_blob, write_buf_to_s3
@@ -47,25 +46,27 @@ def setuplog(verbose):
         logger.setLevel(logging.INFO)
 
 
-def to_alert(bucket_name: str,
-             output_dir: str,
-             interval: int,
-             running_hours=range(6, 22)) -> bool:
+def to_alert(
+    bucket_name: str, output_dir: str, interval: int, running_hours=range(6, 22)
+) -> bool:
     """Fetches the latest timestamp of data and decides to
     alert or not."""
     date = datetime.datetime.utcnow().strftime("%Y/%m/%d")
     prefix = os.path.join(output_dir, date)
     blobs = list_blob(bucket_name=bucket_name, prefix=prefix)
     if blobs:
-        latest_timestamp = max([
-            blob.last_modified
-            for blob in list_blob(bucket_name=bucket_name, prefix=prefix)
-        ])
+        latest_timestamp = max(
+            [
+                blob.last_modified
+                for blob in list_blob(bucket_name=bucket_name, prefix=prefix)
+            ]
+        )
     else:
         latest_timestamp = datetime.datetime(2000, 1, 1)
     return (
         (datetime.datetime.utcnow().timestamp() - latest_timestamp.timestamp())
-        > interval) & (datetime.datetime.utcnow().hour + 7 in running_hours)
+        > interval
+    ) & (datetime.datetime.utcnow().hour + 7 in running_hours)
 
 
 def download_file_and_upload_to_aws(uri, output_dir, filename) -> None:
@@ -74,8 +75,8 @@ def download_file_and_upload_to_aws(uri, output_dir, filename) -> None:
     try:
         date = datetime.datetime.utcnow().strftime("%Y/%m/%d/%H_%M_%S")
         fpath = os.path.join(
-            output_dir,
-            date + "_" + filename.split(".")[0] + "_mono_16khz.aac")
+            output_dir, date + "_" + filename.split(".")[0] + "_mono_16khz.aac"
+        )
 
         logger.info("DOWNLOADING FILE: " + uri)
         response = get(uri, verify=VERIFY_SSL)
@@ -86,15 +87,13 @@ def download_file_and_upload_to_aws(uri, output_dir, filename) -> None:
         with open(os.path.join("/home/radio/tmp", filename), "wb") as fp:
             fp.write(response.content)
 
-        audio, _ = (ffmpeg.input(os.path.join(
-            "/home/radio/tmp",
-            filename)).output("-", format="adts", ar=16000,
-                              ac=1).run(cmd="/home/radio/johnvansickle/ffmpeg",
-                                        capture_stdout=True))
+        audio, _ = (
+            ffmpeg.input(os.path.join("/home/radio/tmp", filename))
+            .output("-", format="adts", ar=16000, ac=1)
+            .run(cmd="/home/radio/johnvansickle/ffmpeg", capture_stdout=True)
+        )
 
-        write_buf_to_s3(contents=audio,
-                        bucket_name=BUCKET_NAME,
-                        object_name=fpath)
+        write_buf_to_s3(contents=audio, bucket_name=BUCKET_NAME, object_name=fpath)
 
         os.remove(os.path.join("/home/radio/tmp", filename))
 
@@ -111,19 +110,15 @@ def download_file_and_upload_to_aws(uri, output_dir, filename) -> None:
 
 
 @click.command()
-@click.option("--url",
-              default=os.getenv("M3U8_URL"),
-              help="URL to HLS m3u8 playlist")
-@click.option("--freq",
-              default=10,
-              help="Frequency for downloading the HLS m3u8 stream")
-@click.option("--output",
-              default=os.getenv("OUTPUT_DIR"),
-              help="Output directory for audio files")
+@click.option("--url", default=os.getenv("M3U8_URL"), help="URL to HLS m3u8 playlist")
+@click.option(
+    "--freq", default=10, help="Frequency for downloading the HLS m3u8 stream"
+)
+@click.option(
+    "--output", default=os.getenv("OUTPUT_DIR"), help="Output directory for audio files"
+)
 @click.option("--verbose", is_flag=True, help="Verbose")
-@click.option("--alert",
-              default=os.getenv("ALERT"),
-              help="Alert interval in minute")
+@click.option("--alert", default=os.getenv("ALERT"), help="Alert interval in minute")
 def fetch_hls_stream(url, freq, output, verbose, alert):
     """Fetches a HLS stream by periodically retrieving the m3u8 url for new
     playlist audio files every freq seconds. For each segment that exists,
@@ -139,8 +134,9 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
             os.makedirs(output)
 
         while True:
-            if (datetime.datetime.utcnow() +
-                    datetime.timedelta(hours=7)).hour in RUNNING_HOURS:
+            if (
+                datetime.datetime.utcnow() + datetime.timedelta(hours=7)
+            ).hour in RUNNING_HOURS:
                 # Retrieve the main m3u8 dynamic playlist file
                 try:
                     dynamic_playlist = m3u8.load(url, verify_ssl=VERIFY_SSL)
@@ -151,8 +147,9 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
                     # Retrieve the real m3u8 playlist file from the dynamic one
                     for playlist in dynamic_playlist.playlists:
                         # Check if we have each segment in the playlist file
-                        playlist_data = m3u8.load(playlist.absolute_uri,
-                                                  verify_ssl=VERIFY_SSL)
+                        playlist_data = m3u8.load(
+                            playlist.absolute_uri, verify_ssl=VERIFY_SSL
+                        )
 
                         for audio_segment in playlist_data.segments:
                             # Since the playlist changes names dynamically we use the
@@ -198,24 +195,18 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
                 # Run compaction to reduce size and upload to AWS S3
                 today = datetime.datetime.utcnow().strftime("%Y%m%d")
                 if not os.path.exists(f"/tmp/{output}.cache.json"):
-                    with open(f"/tmp/{output}.cache.json",
-                              "w",
-                              encoding="utf-8") as f:
+                    with open(f"/tmp/{output}.cache.json", "w", encoding="utf-8") as f:
                         json.dump(
                             {today: False},
                             f,
                             ensure_ascii=False,
                             indent=4,
                         )
-                completion_flag = json.load(
-                    open(f"/tmp/{output}.cache.json", "r"))
+                completion_flag = json.load(open(f"/tmp/{output}.cache.json", "r"))
                 if not completion_flag.get(today, False):
-                    compaction_main(channel=output,
-                                    running_hours=RUNNING_HOURS)
+                    compaction_main(channel=output, running_hours=RUNNING_HOURS)
                     completion_flag[today] = True
-                    with open(f"/tmp/{output}.cache.json",
-                              "w",
-                              encoding="utf-8") as f:
+                    with open(f"/tmp/{output}.cache.json", "w", encoding="utf-8") as f:
                         json.dump(
                             completion_flag,
                             f,
@@ -230,10 +221,10 @@ def fetch_hls_stream(url, freq, output, verbose, alert):
     except Exception as ex:
         logger.exception(ex)
         if to_alert(
-                bucket_name=BUCKET_NAME,
-                output_dir=output,
-                interval=int(alert) * 60,
-                running_hours=RUNNING_HOURS,
+            bucket_name=BUCKET_NAME,
+            output_dir=output,
+            interval=int(alert) * 60,
+            running_hours=RUNNING_HOURS,
         ):
             telebot_send_message(
                 f"Channel *{output}*: {ex} !!! No data in the last {alert} minutes."

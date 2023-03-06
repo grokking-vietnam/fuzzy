@@ -31,4 +31,3 @@ dvc = {extras = ["gs"], version = "^2.41.1"}
 isort = "^5.10.1"
 pre-commit = "^2.20.0"
 toml-sort = "^0.22.1"
-yapf = "^0.32.0"

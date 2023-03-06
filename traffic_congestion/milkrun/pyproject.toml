@@ -18,4 +18,3 @@ black = {allow-prereleases = true, version = "^23.1a1"}
 isort = "^5.10.1"
 pre-commit = "^2.20.0"
 toml-sort = "^0.22.1"
-yapf = "^0.32.0"

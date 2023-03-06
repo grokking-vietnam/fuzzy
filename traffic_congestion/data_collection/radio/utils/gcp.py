@@ -9,8 +9,7 @@ from google.oauth2.service_account import Credentials
 logger = logging.getLogger("fetch_hls_stream")
 
 
-def write_file_to_gdrive(credential_filename: str, root_folder_id: str,
-                         file_path: str):
+def write_file_to_gdrive(credential_filename: str, root_folder_id: str, file_path: str):
     """Writes data to Google Drive"""
     credentials = Credentials.from_service_account_file(credential_filename)
     fs = GoogleDriveFS(credentials=credentials, rootId=root_folder_id)
