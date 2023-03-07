@@ -53,9 +53,17 @@ def list_objects(from_side: str) -> list:
         raise NotImplementedError
 
 
-def validate_size() -> bool:
+def validate_size(objects: List[str], limit: float = 5) -> bool:
     """Validates whether the total size of requested objects is within limit."""
-    return True
+    client = create_client(service_type="client", backend="seaweedfs")
+    print(
+        [
+            client.get_object_attributes(
+                Bucket=BUCKET_NAME, Key=object_key, ObjectAttributes=["ObjectSize"]
+            )
+            for object_key in objects
+        ]
+    )
 
 
 def seaweedfs_to_r2() -> None:
