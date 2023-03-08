@@ -16,6 +16,9 @@ BUCKET_NAME = "radio-project"
 # SeaweedFS Cluster
 SEAWEEDFS_HOSTS = ["11.11.1.89", "11.11.1.90"]
 
+# Cloudflare R2
+LIMIT = 0.00001
+
 # Logger
 logger = logging.getLogger("milk_run")
 
@@ -51,16 +54,16 @@ def create_client(
         raise NotImplementedError
 
 
-def list_objects(from_side: str) -> list:
+def list_objects(from_side: str) -> set:
     """Retrieves a list of active objects from the specified data source."""
     if from_side == "client":
         with sqlite3.connect("objects.db") as con:
             cur = con.cursor()
-            return cur.execute("SELECT * FROM objects WHERE active = 1").fetchall()
+            return set(cur.execute("SELECT * FROM objects WHERE active = 1").fetchall())
     elif from_side == "r2":
         s3 = create_client(service_type="resource", backend="r2")
         bucket = s3.Bucket(BUCKET_NAME)
-        return [item for item in bucket.objects.all()]
+        return set([item.key for item in bucket.objects.all()])
     else:
         raise NotImplementedError
 
@@ -77,22 +80,35 @@ def validate_size(objects: List[str], limit: float = 5) -> bool:
         )
         / 2**30
     )
-    return total_size > limit
+    return total_size < limit
 
 
 def seaweedfs_to_r2() -> None:
-    """Downloads objects from SeaweedFS and upload to Cloudflare R2."""
+    """Synchronizes objects between SeaweedFS and Cloudflare R2 based on requests in SQLite."""
     # Get current status of objects
     requested_objects = list_objects(from_side="client")
-    existing_objects = list_objects(from_side="r2")
+    requested_object_keys = set([obj[2] for obj in requested_objects])
+    existing_object_keys = list_objects(from_side="r2")
+
+    # Validate the size of requested objects
+    assert validate_size(
+        objects=requested_object_keys, limit=LIMIT
+    ), f"Over the free quota of Cloudflare R2, {LIMIT} Gb"
 
     # Infer the list of download and remove objects
     download_objects = [
-        {"source": obj[1], "object_key": obj[2]} for obj in requested_objects
+        {"source": obj[1], "object_key": obj[2]}
+        for obj in requested_objects
+        if obj[2] not in existing_object_keys
     ]
-    remove_objects = []
+    remove_object_keys = [
+        object_key
+        for object_key in existing_object_keys
+        if object_key not in requested_object_keys
+    ]
 
     # Execution
+    dst_client = create_client(backend="r2", service_type="client")
     for obj in download_objects:
         if obj["source"] == "seaweedfs":
             src_client = create_client(
@@ -102,7 +118,6 @@ def seaweedfs_to_r2() -> None:
             )
         else:
             src_client = create_client(backend=obj["source"], service_type="client")
-        dst_client = create_client(backend="r2", service_type="client")
 
         # Download object to mem
         obj_body = src_client.get_object(Bucket=BUCKET_NAME, Key=obj["object_key"])[
@@ -125,6 +140,14 @@ def seaweedfs_to_r2() -> None:
         except ClientError as ex:
             logger.exception(ex)
 
+    for object_key in remove_object_keys:
+        # Remove object on R2
+        try:
+            _ = dst_client.delete_object(Bucket=BUCKET_NAME, Key=object_key)
+            logger.info(f"REMOVED {object_key} on R2")
+        except ClientError as ex:
+            logger.exception(ex)
+
 
 def main() -> None:
     # Init the objects.db database
@@ -136,6 +159,9 @@ def main() -> None:
             )
             con.commit()
 
+    # Synce SeaweedFS and Cloudflare R2
+    seaweedfs_to_r2()
+
 
 if __name__ == "__main__":
-    seaweedfs_to_r2()
+    main()
