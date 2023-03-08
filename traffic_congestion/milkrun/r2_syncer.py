@@ -1,12 +1,23 @@
+import io
+import logging
 import os
+import random
 import sqlite3
 from typing import List, Optional
 
 import boto3
+from botocore.config import Config
+from botocore.exceptions import ClientError
 from configs import S3Configuration
 
 # AWS
 BUCKET_NAME = "radio-project"
+
+# SeaweedFS Cluster
+SEAWEEDFS_HOSTS = ["11.11.1.89", "11.11.1.90"]
+
+# Logger
+logger = logging.getLogger("milk_run")
 
 
 def create_client(
@@ -27,6 +38,7 @@ def create_client(
             "endpoint_url": f"https://{S3Configuration.AWS_R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
             "aws_access_key_id": S3Configuration.AWS_R2_KEY_ID,
             "aws_secret_access_key": S3Configuration.AWS_R2_SECRET,
+            "config": Config(region_name="auto"),
         }
     else:
         raise NotImplementedError
@@ -54,16 +66,18 @@ def list_objects(from_side: str) -> list:
 
 
 def validate_size(objects: List[str], limit: float = 5) -> bool:
-    """Validates whether the total size of requested objects is within limit."""
-    client = create_client(service_type="client", backend="seaweedfs")
-    print(
-        [
-            client.get_object_attributes(
-                Bucket=BUCKET_NAME, Key=object_key, ObjectAttributes=["ObjectSize"]
-            )
-            for object_key in objects
-        ]
+    """Validates whether the total size of requested objects is within limit in Gb."""
+    s3 = create_client(service_type="client", backend="seaweedfs", s3_host="11.11.1.89")
+    total_size = (
+        sum(
+            [
+                s3.get_object(Bucket=BUCKET_NAME, Key=object_key).get("ContentLength")
+                for object_key in objects
+            ]
+        )
+        / 2**30
     )
+    return total_size > limit
 
 
 def seaweedfs_to_r2() -> None:
@@ -73,17 +87,43 @@ def seaweedfs_to_r2() -> None:
     existing_objects = list_objects(from_side="r2")
 
     # Infer the list of download and remove objects
-    download_objects = []
+    download_objects = [
+        {"source": obj[1], "object_key": obj[2]} for obj in requested_objects
+    ]
     remove_objects = []
 
     # Execution
-    clean_up_r2(objects=remove_objects)
+    for obj in download_objects:
+        if obj["source"] == "seaweedfs":
+            src_client = create_client(
+                backend=obj["source"],
+                service_type="client",
+                s3_host=random.choice(SEAWEEDFS_HOSTS),
+            )
+        else:
+            src_client = create_client(backend=obj["source"], service_type="client")
+        dst_client = create_client(backend="r2", service_type="client")
 
+        # Download object to mem
+        obj_body = src_client.get_object(Bucket=BUCKET_NAME, Key=obj["object_key"])[
+            "Body"
+        ].read()
 
-def clean_up_r2(objects: List[str]) -> None:
-    """Removes objects on Cloudflare R2."""
-    r2 = create_client(service_type="client", backend="r2")
-    1
+        # Write bytes content to buffer
+        buf = io.BytesIO()
+        buf.write(obj_body)
+        buf.seek(0)
+
+        # Upload object from buffer to R2
+        try:
+            _ = dst_client.upload_fileobj(buf, BUCKET_NAME, obj["object_key"])
+            logger.info(
+                "TRANSFERRED {} from S3 [{}] to R2".format(
+                    obj["object_key"], obj["source"]
+                )
+            )
+        except ClientError as ex:
+            logger.exception(ex)
 
 
 def main() -> None:
@@ -98,4 +138,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    seaweedfs_to_r2()
