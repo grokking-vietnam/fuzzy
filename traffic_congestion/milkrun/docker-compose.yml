@@ -1,0 +1,8 @@
+version: "3.9"
+services:
+  syncer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./objects.db:/home/milkrun/objects.db

@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import sqlite3
+import time
 from typing import List, Optional
 
 import boto3
@@ -17,10 +18,21 @@ BUCKET_NAME = "radio-project"
 SEAWEEDFS_HOSTS = ["11.11.1.89", "11.11.1.90"]
 
 # Cloudflare R2
-LIMIT = 0.00001
+LIMIT = 1
 
 # Logger
 logger = logging.getLogger("milk_run")
+
+
+def setuplog(verbose: bool = True):
+    """Configs the log output of fetch_hls_stream"""
+    log_msg_format = "%(asctime)s :: %(levelname)5s ::  %(name)10s :: %(message)s"
+    log_date_format = "%Y-%m-%d %H:%M:%S"
+    logging.basicConfig(format=log_msg_format, datefmt=log_date_format)
+    if verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 
 def create_client(
@@ -101,11 +113,13 @@ def seaweedfs_to_r2() -> None:
         for obj in requested_objects
         if obj[2] not in existing_object_keys
     ]
+    logger.info("Need to download {} objects".format(len(download_objects)))
     remove_object_keys = [
         object_key
         for object_key in existing_object_keys
         if object_key not in requested_object_keys
     ]
+    logger.info("Need to remove {} objects".format(len(remove_object_keys)))
 
     # Execution
     dst_client = create_client(backend="r2", service_type="client")
@@ -159,8 +173,15 @@ def main() -> None:
             )
             con.commit()
 
-    # Synce SeaweedFS and Cloudflare R2
-    seaweedfs_to_r2()
+    setuplog(verbose=True)
+
+    while True:
+        try:
+            # Sync SeaweedFS and Cloudflare R2
+            seaweedfs_to_r2()
+            time.sleep(60)
+        except Exception as ex:
+            logger.exception(ex)
 
 
 if __name__ == "__main__":
