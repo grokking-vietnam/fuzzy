@@ -33,6 +33,5 @@ USER milkrun
 # Install application into container
 COPY .env .
 COPY *.py .
-COPY objects.db .
 
 ENTRYPOINT ["python", "r2_syncer.py"]
