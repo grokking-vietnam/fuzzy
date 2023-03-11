@@ -19,7 +19,7 @@ from utils.aws import delete_blob, download_blob, list_blob, write_file_to_s3
 
 # AWS
 BUCKET_NAME = "radio-project"
-TTL = 14  # days
+TTL = 3  # days
 
 # SeaweedFS Cluster
 SEAWEEDFS_HOSTS = ["11.11.1.89", "11.11.1.90"]
