@@ -149,7 +149,7 @@ def main(channel: str, running_hours=range(6, 22)) -> None:
 
 
 if __name__ == "__main__":
-    with open("../radio_channels.yaml", "r") as fp:
+    with open("radio_channels.yaml", "r") as fp:
         try:
             channels = yaml.safe_load(fp)
         except yaml.YAMLError as e:
