@@ -13,6 +13,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List
 
+import yaml
+
 sys.path.append(Path(__file__).parent.absolute().as_posix())  # Add radio/ to root path
 
 from utils.aws import delete_blob, download_blob, list_blob, write_file_to_s3
@@ -98,6 +100,7 @@ def main(channel: str, running_hours=range(6, 22)) -> None:
                     s3_garbage.append(blob.key)
             else:
                 s3_garbage.append(blob.key)
+        logger.info("Need to clean {} garbage files".format(len(s3_garbage)))
 
         # Get list of all files from SeaweedFS Cluster S3
         seaweedfs_cluster_blobs = list_blob(
@@ -146,4 +149,11 @@ def main(channel: str, running_hours=range(6, 22)) -> None:
 
 
 if __name__ == "__main__":
-    main(channel="voh-95.6")
+    with open("../radio_channels.yaml", "r") as fp:
+        try:
+            channels = yaml.safe_load(fp)
+        except yaml.YAMLError as e:
+            print(e)
+
+    for channel in channels["channels"].keys():
+        main(channel=channel)
