@@ -15,7 +15,7 @@ services:
       - 8080:8080
       - 18080:18080
       - 9328:9328
-    command: volume -dir="/mnt" -mserver="master:9333" -ip.bind=0.0.0.0 -port=8080 -metricsPort=9328 -max=50
+    command: volume -dir="/mnt" -mserver="master:9333" -ip.bind=0.0.0.0 -port=8080 -metricsPort=9328 -max=350
     depends_on:
       - master
     volumes:
@@ -27,7 +27,7 @@ services:
       - 8081:8081
       - 18081:18081
       - 9329:9329
-    command: volume -dir="/mnt" -mserver="master:9333" -ip.bind=0.0.0.0 -port=8081 -metricsPort=9329 -max=50
+    command: volume -dir="/mnt" -mserver="master:9333" -ip.bind=0.0.0.0 -port=8081 -metricsPort=9329 -max=350
     depends_on:
       - master
     volumes:
