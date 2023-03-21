@@ -7,33 +7,21 @@ services:
       - 9333:9333
       - 19333:19333
       - 9324:9324
-    command: master -mdir="/mnt" -ip=master -ip.bind=0.0.0.0 -metricsPort=9324 -volumeSizeLimitMB=1000
+    command: master -mdir=/data -ip=master -ip.bind=0.0.0.0 -metricsPort=9324 -volumeSizeLimitMB=1000
     volumes:
-      - /var/seaweedfs/master:/mnt
+      - /var/seaweedfs/master:/data
     restart: always
-  volume_01:
+  volume:
     image: chrislusf/seaweedfs # use a remote image
     ports:
       - 8080:8080
       - 18080:18080
       - 9328:9328
-    command: volume -dir="/mnt" -mserver="master:9333" -ip.bind=0.0.0.0 -port=8080 -metricsPort=9328 -max=350
+    command: volume -dir=/data -mserver="master:9333" -ip.bind=0.0.0.0 -port=8080 -metricsPort=9328 -max=350
     depends_on:
       - master
     volumes:
-      - /var/seaweedfs/volume_01:/mnt
-    restart: always
-  volume_02:
-    image: chrislusf/seaweedfs # use a remote image
-    ports:
-      - 8081:8081
-      - 18081:18081
-      - 9329:9329
-    command: volume -dir="/mnt" -mserver="master:9333" -ip.bind=0.0.0.0 -port=8081 -metricsPort=9329 -max=350
-    depends_on:
-      - master
-    volumes:
-      - /var/seaweedfs/volume_02:/mnt
+      - /var/seaweedfs/volume:/data
     restart: always
   filer:
     image: chrislusf/seaweedfs # use a remote image
@@ -46,8 +34,7 @@ services:
     stdin_open: true
     depends_on:
       - master
-      - volume_01
-      - volume_02
+      - volume
     restart: always
   s3:
     image: chrislusf/seaweedfs # use a remote image
@@ -57,8 +44,8 @@ services:
     command: s3 -config=/etc/seaweedfs/s3.json -filer="filer:8888" -ip.bind=0.0.0.0 -metricsPort=9327
     depends_on:
       - master
-      - volume_01
-      - volume_02
+      - volume
+
       - filer
     volumes:
       - /etc/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
@@ -70,8 +57,7 @@ services:
     command: 'webdav -filer="filer:8888"'
     depends_on:
       - master
-      - volume_01
-      - volume_02
+      - volume
       - filer
     restart: always
   prometheus:

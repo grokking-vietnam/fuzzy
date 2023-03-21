@@ -29,9 +29,8 @@ sudo cp seaweedfs/s3.json /etc/seaweedfs
 sudo mkdir -p /etc/prometheus
 sudo cp seaweedfs/prometheus.yml /etc/prometheus
 
-sudo mkdir -p /var/seaweedfs/mnt
-sudo mkdir -p /var/seaweedfs/volume_01
-sudo mkdir -p /var/seaweedfs/volume_02
+sudo mkdir -p /var/seaweedfs/master
+sudo mkdir -p /var/seaweedfs/volume
 sudo chmod -R 777 /var/seaweedfs
 ```
 
