@@ -7,7 +7,9 @@ services:
       - 9333:9333
       - 19333:19333
       - 9324:9324
-    command: master -ip=master -ip.bind=0.0.0.0 -metricsPort=9324 -volumeSizeLimitMB=1000
+    command: master -mdir="/mnt" -ip=master -ip.bind=0.0.0.0 -metricsPort=9324 -volumeSizeLimitMB=1000
+    volumes:
+      - /var/seaweedfs/master:/mnt
     restart: always
   volume_01:
     image: chrislusf/seaweedfs # use a remote image
