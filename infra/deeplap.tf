@@ -52,6 +52,18 @@ resource "proxmox_vm_qemu" "deeplab" {
     ]
   }
 
+  provisioner "file" {
+    source      = "install_conda.sh"
+    destination = "/tmp/install_conda.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo chmod +x /tmp/install_conda.sh",
+      "/tmp/install_conda.sh",
+    ]
+  }
+
   provisioner "remote-exec" {
     inline = [
       "wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb",
